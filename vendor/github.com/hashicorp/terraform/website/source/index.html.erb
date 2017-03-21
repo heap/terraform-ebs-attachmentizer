@@ -27,6 +27,13 @@
 						<a class="terra-btn" href="/intro/index.html">Get Started</a>
 					</p>
 				</div>
+				<div class="col-md-12">
+					<div class="vert-container announcement">
+						<p class="center">
+							Announcing Terraform Enterprise, collaboration for teams. <a class="link-highlight" href="https://hashicorp.com/terraform.html">Learn more.</a>
+						</p>
+					</div>
+				</div>
 			</div>
 		</div><!-- /. row -->
 	</div><!-- / .container -->
@@ -162,23 +169,14 @@
       <div class="col-md-offset-1 col-md-11 col-sm-12">
 				<h2>Latest</h2>
 			</div>
-      <div class="latest-col latest-col-left col-md-4 col-md-offset-1 col-sm-12">
-        <div class="latest-item">
-          <img src="<%= image_path('webinar-image.jpg') %>" srcset="<%= image_path('webinar-image@2x.jpg') %> 2x, <%= image_path('webinar-image.jpg') %> 1x">
-  				<h3 class="latest-title">Join the live webinar to learn about provisioning Microsoft Azure with HashiCorp Terraform and see a demo</h3>
-  				<p>
-  					<a class="outline-btn small-outline-btn" href="http://hashi.co/2lJIzDl">Register Now</a>
-  				</p>
-        </div>
-			</div>
-			<div class="latest-col latest-col-right col-md-6 col-sm-12">
+			<div class="latest-col latest-col-left col-md-12 col-sm-12">
         <div class="latest-item latest-item-text">
-          <h3 class="latest-title">Terraform 0.8 Released</h3>
+          <h3 class="latest-title">Terraform 0.9 Released</h3>
           <p class="lower-opacity">
-            Terraform continues to be HashiCorp's fastest growing project. Read the highlights from the 0.8 release
+            Terraform 0.9 adds major new functionality to Terraform. Read the highlights from the 0.9 release
           </p>
   				<p>
-  					<a class="outline-btn small-outline-btn" href="https://www.hashicorp.com/blog/terraform-0-8.html">Read more</a>
+					<a class="outline-btn small-outline-btn" href="https://www.hashicorp.com/blog/terraform-0-9/">Read more</a>
   				</p>
         </div>
         <div class="latest-item latest-item-text">
@@ -254,22 +252,22 @@
 							<div class="">
 								<div class="display">
 								<p>resource <span class="txt-spe">"aws_elb"</span> <span class="txt-str">"frontend"</span> {</p>
-								<p>    name = <span class="txt-str">"frontend-load-balancer"</span></p>
-								<p>    listener {</p>
-								<p>        instance_port = <span class="txt-int">8000</span></p>
-								<p>        instance_protocol = <span class="txt-str">"http"</span></p>
-								<p>        lb_port = <span class="txt-int">80</span></p>
-								<p>        lb_protocol = <span class="txt-str">"http"</span></p>
-								<p>    }</p>
+								<p>  name = <span class="txt-str">"frontend-load-balancer"</span></p>
+								<p>  listener {</p>
+								<p>    instance_port     = <span class="txt-int">8000</span></p>
+								<p>    instance_protocol = <span class="txt-str">"http"</span></p>
+								<p>    lb_port           = <span class="txt-int">80</span></p>
+								<p>    lb_protocol       = <span class="txt-str">"http"</span></p>
+								<p>  }</p>
 								<p> </p>
-								<p>    instances = [<span class="txt-str">"<span class="txt-var">${aws_instance.app.*.id}</span>"</span>]</p>
+								<p>  instances = [<span class="txt-str">"<span class="txt-var">${aws_instance.app.*.id}</span>"</span>]</p>
 								<p>}</p>
 								<p> </p>
 								<p>resource <span class="txt-spe">"aws_instance"</span> <span class="txt-str">"app"</span> {</p>
-								<p>    count = <span class="txt-int">5</span></p>
+								<p>  count = <span class="txt-int">5</span></p>
 								<p> </p>
-								<p>    ami = <span class="txt-str">"ami-408c7f28"</span></p>
-								<p>    instance_type = <span class="txt-str">"t1.micro"</span></p>
+								<p>  ami           = <span class="txt-str">"ami-408c7f28"</span></p>
+								<p>  instance_type = <span class="txt-str">"t1.micro"</span></p>
 								<p>}</p>
 								</div>
 							</div>

@@ -1,5 +1,5 @@
 {
-    "memo": "08416cfba7da8f9e88fc2135b33d03bb6e5c8b75302160ec495a355d3661a8ad",
+    "memo": "de5af3811a1d3126bc40e0155604a446d1b0fd1acb540b20ae459c17d4328846",
     "projects": [
         {
             "name": "github.com/apparentlymart/go-cidr",
@@ -127,8 +127,8 @@
         },
         {
             "name": "github.com/hashicorp/terraform",
-            "version": "v0.8.8",
-            "revision": "403a86dc557fae52f8e39676b11e1e4356b7d1a2",
+            "version": "v0.9.1",
+            "revision": "7c25ef851bd26f720e749983597b36b17061e3ca",
             "packages": [
                 "config",
                 "config/module",
@@ -162,6 +162,14 @@
             "name": "github.com/mitchellh/go-homedir",
             "branch": "master",
             "revision": "b8bc1bf767474819792c23f32d8286a45736f1c6",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/mitchellh/hashstructure",
+            "branch": "master",
+            "revision": "ab25296c0f51f1022f01cd99dfb45f1775de8799",
             "packages": [
                 "."
             ]

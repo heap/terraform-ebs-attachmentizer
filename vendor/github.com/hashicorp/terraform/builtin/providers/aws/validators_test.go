@@ -1550,3 +1550,82 @@ func TestValidateDmsReplicationTaskId(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateAccountAlias(t *testing.T) {
+	validAliases := []string{
+		"tf-alias",
+		"0tf-alias1",
+	}
+
+	for _, s := range validAliases {
+		_, errors := validateAccountAlias(s, "account_alias")
+		if len(errors) > 0 {
+			t.Fatalf("%q should be a valid account alias: %v", s, errors)
+		}
+	}
+
+	invalidAliases := []string{
+		"tf",
+		"-tf",
+		"tf-",
+		"TF-Alias",
+		"tf-alias-tf-alias-tf-alias-tf-alias-tf-alias-tf-alias-tf-alias-tf-alias",
+	}
+
+	for _, s := range invalidAliases {
+		_, errors := validateAccountAlias(s, "account_alias")
+		if len(errors) == 0 {
+			t.Fatalf("%q should not be a valid account alias: %v", s, errors)
+		}
+	}
+}
+
+func TestValidateIamRoleProfileName(t *testing.T) {
+	validNames := []string{
+		"tf-test-role-profile-1",
+	}
+
+	for _, s := range validNames {
+		_, errors := validateIamRolePolicyName(s, "name")
+		if len(errors) > 0 {
+			t.Fatalf("%q should be a valid IAM role policy name: %v", s, errors)
+		}
+	}
+
+	invalidNames := []string{
+		"invalid#name",
+		"this-is-a-very-long-role-policy-name-this-is-a-very-long-role-policy-name-this-is-a-very-long-role-policy-name-this-is-a-very-long",
+	}
+
+	for _, s := range invalidNames {
+		_, errors := validateIamRolePolicyName(s, "name")
+		if len(errors) == 0 {
+			t.Fatalf("%q should not be a valid IAM role policy name: %v", s, errors)
+		}
+	}
+}
+
+func TestValidateIamRoleProfileNamePrefix(t *testing.T) {
+	validNamePrefixes := []string{
+		"tf-test-role-profile-",
+	}
+
+	for _, s := range validNamePrefixes {
+		_, errors := validateIamRolePolicyNamePrefix(s, "name_prefix")
+		if len(errors) > 0 {
+			t.Fatalf("%q should be a valid IAM role policy name prefix: %v", s, errors)
+		}
+	}
+
+	invalidNamePrefixes := []string{
+		"invalid#name_prefix",
+		"this-is-a-very-long-role-policy-name-prefix-this-is-a-very-long-role-policy-name-prefix-this-is-a-very-",
+	}
+
+	for _, s := range invalidNamePrefixes {
+		_, errors := validateIamRolePolicyNamePrefix(s, "name_prefix")
+		if len(errors) == 0 {
+			t.Fatalf("%q should not be a valid IAM role policy name prefix: %v", s, errors)
+		}
+	}
+}

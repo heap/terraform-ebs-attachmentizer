@@ -37,7 +37,6 @@ resource "fastly_service_v1" "demo" {
 
   force_destroy = true
 }
-
 ```
 
 Basic usage with an Amazon S3 Website and that removes the `x-amz-request-id` header:
@@ -108,13 +107,13 @@ resource "fastly_service_v1" "demo" {
   force_destroy = true
 
   vcl {
-    name = "my_custom_main_vcl"
+    name    = "my_custom_main_vcl"
     content = "${file("${path.module}/my_custom_main.vcl")}"
-    main = true
+    main    = true
   }
 
   vcl {
-    name = "my_custom_library_vcl"
+    name    = "my_custom_library_vcl"
     content = "${file("${path.module}/my_custom_library.vcl")}"
   }
 }
@@ -143,6 +142,7 @@ when an item is not to be cached based on an above `condition`. Defined below
 content. Defined below.
 * `header` - (Optional) A set of Headers to manipulate for each request. Defined
 below.
+* `healthcheck` - (Optional) Automated healthchecks on the cache that can change how fastly interacts with the cache based on its health.
 * `default_host` - (Optional) The default hostname.
 * `default_ttl` - (Optional) The default Time-to-live (TTL) for
 requests.
@@ -180,7 +180,9 @@ Default `200`.
 * `port` - (Optional) The port number on which the Backend responds. Default `80`.
 * `request_condition` - (Optional, string) Name of already defined `condition`, which if met, will select this backend during a request.
 * `ssl_check_cert` - (Optional) Be strict about checking SSL certs. Default `true`.
-* `ssl_hostname` - (Optional) Used for both SNI during the TLS handshake and to validate the cert.
+* `ssl_hostname` - (Optional, deprecated by Fastly) Used for both SNI during the TLS handshake and to validate the cert.
+* `ssl_cert_hostname` - (Optional) Overrides ssl_hostname, but only for cert verification. Does not affect SNI at all.
+* `ssl_sni_hostname` - (Optional) Overrides ssl_hostname, but only for SNI in the handshake. Does not affect cert validation at all.
 * `shield` - (Optional) The POP of the shield designated to reduce inbound load.
 * `weight` - (Optional) The [portion of traffic](https://docs.fastly.com/guides/performance-tuning/load-balancing-configuration.html#how-weight-affects-load-balancing) to send to this Backend. Each Backend receives `weight / total` of the traffic. Default `100`.
 

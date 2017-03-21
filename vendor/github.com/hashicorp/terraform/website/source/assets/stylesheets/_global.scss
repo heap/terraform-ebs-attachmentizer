@@ -17,7 +17,7 @@ body {
 
 h1, h2, h3, h4, h5 {
     -webkit-font-smoothing: antialiased;
-    font-family: "klavika-web";
+    font-family: $font-family-klavika;
     font-weight: 600;
 }
 h1{
@@ -38,10 +38,13 @@ h3{
   text-transform: uppercase;
 }
 
+h4 {
+  font-size: 18px;
+}
+
 p {
   margin-bottom: 30px;
   font-size: 16px;
-  font-family: $font-family-open-sans;
   font-weight: regular;
   line-height: 1.5;
 }
@@ -72,6 +75,14 @@ pre {
 	border: none;
 	padding: 20px;
 	margin-bottom: 0;
+}
+
+// Typekit utilites to hide FOUC
+.wf-loading {
+  visibility: hidden;
+}
+.wf-active, .wf-inactive {
+  visibility: visible;
 }
 
 
