@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"reflect"
 	"strconv"
 
 	tf "github.com/hashicorp/terraform/terraform"
@@ -101,9 +100,12 @@ func tfStateStuff(fn string) {
 			if !ok {
 				log.Fatal("cast failed")
 			}
-			for k, v := range dev {
-				fmt.Printf("%v: %v\n", k, reflect.TypeOf(v))
+
+			ebd, ok := ebdFromMap(dev)
+			if !ok {
+				log.Fatal("could not convert from map")
 			}
+			fmt.Printf("%v\n%#v\n\n", ebd.deviceName, ebd)
 		}
 
 		fmt.Println("-----")
