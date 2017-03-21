@@ -1,5 +1,5 @@
 {
-    "memo": "009d67658b63c046a043e747c2b71d6dc53a3aab982a38e09c6169bf3f3ca8e4",
+    "memo": "08416cfba7da8f9e88fc2135b33d03bb6e5c8b75302160ec495a355d3661a8ad",
     "projects": [
         {
             "name": "github.com/apparentlymart/go-cidr",
@@ -31,14 +31,12 @@
                 "aws/session",
                 "aws/signer/v4",
                 "private/protocol",
-                "private/protocol/ec2query",
                 "private/protocol/query",
                 "private/protocol/query/queryutil",
                 "private/protocol/rest",
                 "private/protocol/restxml",
                 "private/protocol/xml/xmlutil",
                 "private/waiter",
-                "service/ec2",
                 "service/s3",
                 "service/sts"
             ]
@@ -130,7 +128,7 @@
         {
             "name": "github.com/hashicorp/terraform",
             "version": "v0.8.8",
-            "revision": "63eb49a8d30bc5b1d7bd5c0d73ff935b7a7dcb41",
+            "revision": "403a86dc557fae52f8e39676b11e1e4356b7d1a2",
             "packages": [
                 "config",
                 "config/module",

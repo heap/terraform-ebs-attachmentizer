@@ -7,9 +7,6 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	tf "github.com/hashicorp/terraform/terraform"
 	tfstate "github.com/hashicorp/terraform/state"
 	tfhash "github.com/hashicorp/terraform/helper/hashcode"
@@ -17,12 +14,7 @@ import (
 )
 
 func main() {
-	switch(os.Args[1]) {
-	case "tf":
-		tfStateStuff(os.Args[2])
-	case "ec2":
-		ec2Stuff(os.Args[2])
-	}
+	tfStateStuff(os.Args[1])
 }
 
 type volAtt struct {
@@ -86,49 +78,6 @@ func (v *volAtt) instanceState() *tf.InstanceState {
 			"volume_id": v.volume,
 		},
 		Tainted: false,
-	}
-}
-
-
-func ec2Stuff(inst string) {
-	sess, err := session.NewSession()
-	if err != nil {
-		panic(err.Error())
-	}
-	svc := ec2.New(sess, &aws.Config{Region: aws.String("us-east-1")})
-
-	params := &ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			{
-				Name: aws.String("tag:Name"),
-				Values: []*string{
-					aws.String(inst),
-				},
-			},
-		},
-	}
-
-	resp, err:= svc.DescribeInstances(params)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	for _, resv := range resp.Reservations {
-		for _, inst := range resv.Instances {
-			for _, blkDev := range inst.BlockDeviceMappings {
-				instance := inst.InstanceId
-				volume := blkDev.Ebs.VolumeId
-				device := blkDev.DeviceName
-				att := volAtt {
-					name: fmt.Sprintf("%v-%v-%v", *instance, *volume, *device),
-					instance: *instance,
-					volume: *volume,
-					device: *device,
-				}
-				fmt.Printf("%v %v\n", att.id(), att)
-				fmt.Println(att.instanceState())
-			}
-		}
 	}
 }
 
