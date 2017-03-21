@@ -1,0 +1,196 @@
+{
+    "memo": "009d67658b63c046a043e747c2b71d6dc53a3aab982a38e09c6169bf3f3ca8e4",
+    "projects": [
+        {
+            "name": "github.com/apparentlymart/go-cidr",
+            "branch": "master",
+            "revision": "a3ebdb999b831ecb6ab8a226e31b07b2b9061c47",
+            "packages": [
+                "cidr"
+            ]
+        },
+        {
+            "name": "github.com/aws/aws-sdk-go",
+            "version": "v1.7.9",
+            "revision": "695fe24acaf9afe80b0ce261d4637f42ba0b4c7d",
+            "packages": [
+                "aws",
+                "aws/awserr",
+                "aws/awsutil",
+                "aws/client",
+                "aws/client/metadata",
+                "aws/corehandlers",
+                "aws/credentials",
+                "aws/credentials/ec2rolecreds",
+                "aws/credentials/endpointcreds",
+                "aws/credentials/stscreds",
+                "aws/defaults",
+                "aws/ec2metadata",
+                "aws/endpoints",
+                "aws/request",
+                "aws/session",
+                "aws/signer/v4",
+                "private/protocol",
+                "private/protocol/ec2query",
+                "private/protocol/query",
+                "private/protocol/query/queryutil",
+                "private/protocol/rest",
+                "private/protocol/restxml",
+                "private/protocol/xml/xmlutil",
+                "private/waiter",
+                "service/ec2",
+                "service/s3",
+                "service/sts"
+            ]
+        },
+        {
+            "name": "github.com/bgentry/go-netrc",
+            "branch": "master",
+            "revision": "9fd32a8b3d3d3f9d43c341bfe098430e07609480",
+            "packages": [
+                "netrc"
+            ]
+        },
+        {
+            "name": "github.com/go-ini/ini",
+            "version": "v1.26.0",
+            "revision": "1730955e3146956d6a087861380f9b4667ed5071",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/hashicorp/errwrap",
+            "branch": "master",
+            "revision": "7554cd9344cec97297fa6649b055a8c98c2a1e55",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/hashicorp/go-getter",
+            "branch": "master",
+            "revision": "c3d66e76678dce180a7b452653472f949aedfbcd",
+            "packages": [
+                ".",
+                "helper/url"
+            ]
+        },
+        {
+            "name": "github.com/hashicorp/go-multierror",
+            "branch": "master",
+            "revision": "ed905158d87462226a13fe39ddf685ea65f1c11f",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/hashicorp/go-uuid",
+            "branch": "master",
+            "revision": "64130c7a86d732268a38cb04cfbaf0cc987fda98",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/hashicorp/go-version",
+            "branch": "master",
+            "revision": "03c5bf6be031b6dd45afec16b1cf94fc8938bc77",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/hashicorp/hcl",
+            "branch": "master",
+            "revision": "630949a3c5fa3c613328e1b8256052cbc2327c9b",
+            "packages": [
+                ".",
+                "hcl/ast",
+                "hcl/parser",
+                "hcl/scanner",
+                "hcl/strconv",
+                "hcl/token",
+                "json/parser",
+                "json/scanner",
+                "json/token"
+            ]
+        },
+        {
+            "name": "github.com/hashicorp/hil",
+            "branch": "master",
+            "revision": "5b8d13c8c5c2753e109fab25392a1dbfa2db93d2",
+            "packages": [
+                ".",
+                "ast",
+                "parser",
+                "scanner"
+            ]
+        },
+        {
+            "name": "github.com/hashicorp/terraform",
+            "version": "v0.8.8",
+            "revision": "63eb49a8d30bc5b1d7bd5c0d73ff935b7a7dcb41",
+            "packages": [
+                "config",
+                "config/module",
+                "dag",
+                "flatmap",
+                "helper/experiment",
+                "helper/hashcode",
+                "helper/hilmapstructure",
+                "helper/shadow",
+                "state",
+                "terraform"
+            ]
+        },
+        {
+            "name": "github.com/jmespath/go-jmespath",
+            "version": "0.2.2",
+            "revision": "3433f3ea46d9f8019119e7dd41274e112a2359a9",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/mitchellh/copystructure",
+            "branch": "master",
+            "revision": "f81071c9d77b7931f78c90b416a074ecdc50e959",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/mitchellh/go-homedir",
+            "branch": "master",
+            "revision": "b8bc1bf767474819792c23f32d8286a45736f1c6",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/mitchellh/mapstructure",
+            "branch": "master",
+            "revision": "53818660ed4955e899c0bcafa97299a388bd7c8e",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/mitchellh/reflectwalk",
+            "branch": "master",
+            "revision": "417edcfd99a4d472c262e58f22b4bfe97580f03e",
+            "packages": [
+                "."
+            ]
+        },
+        {
+            "name": "github.com/satori/go.uuid",
+            "version": "v1.1.0",
+            "revision": "879c5887cd475cd7864858769793b2ceb0d44feb",
+            "packages": [
+                "."
+            ]
+        }
+    ]
+}
