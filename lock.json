@@ -1,5 +1,5 @@
 {
-    "memo": "de5af3811a1d3126bc40e0155604a446d1b0fd1acb540b20ae459c17d4328846",
+    "memo": "f17dc86158527700ce518a7db45cbc9de0dc19f69d8c720207b1028b0500a0e6",
     "projects": [
         {
             "name": "github.com/apparentlymart/go-cidr",
@@ -47,6 +47,14 @@
             "revision": "9fd32a8b3d3d3f9d43c341bfe098430e07609480",
             "packages": [
                 "netrc"
+            ]
+        },
+        {
+            "name": "github.com/davecgh/go-spew",
+            "version": "v1.1.0",
+            "revision": "346938d642f2ec3594ed81d874461961cd0faa76",
+            "packages": [
+                "spew"
             ]
         },
         {
@@ -176,7 +184,6 @@
         },
         {
             "name": "github.com/mitchellh/mapstructure",
-            "branch": "master",
             "revision": "53818660ed4955e899c0bcafa97299a388bd7c8e",
             "packages": [
                 "."
