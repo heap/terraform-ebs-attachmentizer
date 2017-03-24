@@ -1,22 +1,85 @@
 package main
-
 import (
 	"bytes"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 
-	tf "github.com/hashicorp/terraform/terraform"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	// "github.com/davecgh/go-spew/spew"
+
 	"github.com/hashicorp/terraform/flatmap"
+	tf "github.com/hashicorp/terraform/terraform"
 	tfhash "github.com/hashicorp/terraform/helper/hashcode"
 	tfstate "github.com/hashicorp/terraform/state"
-	"github.com/davecgh/go-spew/spew"
 )
 
 func main() {
-	tfStateStuff(os.Args[1])
+	instDevMap := ec2Stuff(os.Args[1])
+	tfStateStuff(os.Args[2], instDevMap)
 }
+
+type volAtt struct {
+	name, instance, volume, device string
+}
+
+func nameFilter(inst string) *ec2.Filter {
+	return &ec2.Filter{
+		Name: aws.String("tag:Name"),
+		Values: []*string{
+			aws.String(inst),
+		},
+	}
+}
+
+type instanceDeviceMap map[string]map[string]string
+
+func ec2Stuff(inst string) instanceDeviceMap {
+	sess, err := session.NewSession()
+	if err != nil {
+		panic(err.Error())
+	}
+	svc := ec2.New(sess, &aws.Config{Region: aws.String("us-east-1")})
+
+	params := &ec2.DescribeInstancesInput{
+		Filters: []*ec2.Filter{
+			nameFilter(inst),
+		},
+	}
+	resp, err:= svc.DescribeInstances(params)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	instDevMap := make(instanceDeviceMap)
+	for _, resv := range resp.Reservations {
+		for _, inst := range resv.Instances {
+			devMap := make(map[string]string)
+			instDevMap[*inst.InstanceId] = devMap
+			for _, blkDev := range inst.BlockDeviceMappings {
+				devMap[normalizeDeviceName(*blkDev.DeviceName)] = *blkDev.Ebs.VolumeId
+			}
+		}
+	}
+	return instDevMap
+}
+
+// TODO: make this more robust.
+func normalizeDeviceName(dev string) string {
+	if strings.HasPrefix(dev, "/dev/") {
+		return dev
+	} else {
+		return fmt.Sprintf("/dev/%v", dev)
+	}
+}
+
+/////////////////
+// NEW STUFF HERE
+/////////////////
 
 // aws_ebs_volume attributes from
 //    https://github.com/hashicorp/terraform/blob/ef94acbf1f753dd1d03d3249cd58f4876cd19682/builtin/providers/aws/resource_aws_ebs_volume.go#L27-L68
@@ -67,42 +130,63 @@ func volumeAttachmentID(name, volumeID, instanceID string) string {
 	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
 }
 
-func makeVolumeRes(res *tf.ResourceState, dev map[string]interface{}) *tf.ResourceState {
+func makeVolumeRes(volID string, dev map[string]string) *tf.ResourceState {
 	var attrs = make(map[string]string)
 	for k, v := range dev {
 		if _, ok := awsEbsVolumeAttrs[k]; ok {
-			attrs[k] = fmt.Sprintf("%v", v)
+			attrs[k] = v
 		}
 	}
-	spew.Printf("vol attrs: %v\n", attrs)
 	newRes := &tf.ResourceState{
 		Type: "aws_ebs_volume",
 		Primary: &tf.InstanceState{
-			ID: "NEED TO GET FROM AWS",
+			ID: volID,
 			Attributes: attrs,
 		},
 	}
 	return newRes
 }
 
-func makeAttachmentRes(res *tf.ResourceState, dev map[string]interface{}) *tf.ResourceState {
+func makeAttachmentRes(instanceName, instanceID, volumeID string,
+dev map[string]string) *tf.ResourceState {
 	attrs := make(map[string]string)
 	for k, v := range dev {
 		if _, ok := awsVolumeAttachmentAttrs[k]; ok {
 			attrs[k] = fmt.Sprintf("%v", v)
 		}
 	}
+	attrs["instance_id"] = instanceID
+	attrs["volume_id"] = volumeID
 	newRes := &tf.ResourceState{
 		Type: "aws_volume_attachment",
 		Primary: &tf.InstanceState{
-			ID: "NEED TO GET FROM AWS",
+			// TODO: Generate this correctly.
+			ID: volumeAttachmentID(instanceName, volumeID, instanceID),
 			Attributes: attrs,
 		},
 	}
 	return newRes
 }
 
-func tfStateStuff(fn string) {
+// TODO: This must be easier with some kind of reflection thing.
+func mapify(slice []interface{}) ([]map[string]string, bool) {
+	var output []map[string]string
+	for _, input := range slice {
+		stringMap := make(map[string]string)
+		interfaceMap, ok := input.(map[string]interface{})
+		if !ok {
+			return nil, false
+		}
+		for k, v := range interfaceMap {
+			stringMap[k] = fmt.Sprintf("%v", v)
+		}
+
+		output = append(output, stringMap)
+	}
+	return output, true
+}
+
+func tfStateStuff(fn string, instDevMap instanceDeviceMap) {
 	localState := tfstate.LocalState{Path: fn, PathOut: "/tmp/out.tfstate"}
 	localState.RefreshState()
 	root := localState.State().Modules[0]
@@ -113,26 +197,39 @@ func tfStateStuff(fn string) {
 		if res.Type != "aws_instance" {
 			continue
 		}
+		devMap, ok := instDevMap[res.Primary.ID]
+		if !ok {
+			continue
+		}
+		instanceName := name
 		instanceRes := res
-		fmt.Printf("id: %v\n", res.Primary.ID)
-		devices, ok := flatmap.Expand(res.Primary.Attributes, "ebs_block_device").([]interface{})
+		instanceID := instanceRes.Primary.ID
+
+		interfaceDevices, ok := flatmap.Expand(
+			res.Primary.Attributes,
+			"ebs_block_device").([]interface{})
+
+
 		if !ok {
 			log.Fatalf("could not expand ebs_block_device for %v", name)
 		}
+
+		devices, ok := mapify(interfaceDevices)
+		if !ok {
+			log.Fatalf("Could not mapify")
+		}
 		for _, dev := range devices {
-			dev, ok := dev.(map[string]interface{})
-			if !ok {
-				log.Fatalf("Bad ebs_block_device block in %v", name)
-			}
-			volumeRes := makeVolumeRes(instanceRes, dev)
-			attachmentRes := makeAttachmentRes(instanceRes, dev)
+			dev["device_name"] = normalizeDeviceName(dev["device_name"])
+		}
+		for _, dev := range devices {
+			devName := normalizeDeviceName(dev["device_name"])
+			volumeRes := makeVolumeRes(devMap[devName], dev)
+			volumeID := volumeRes.Primary.ID
+			attachmentRes := makeAttachmentRes(instanceName, instanceID, volumeID, dev)
 			newResources = append(newResources, volumeRes, attachmentRes)
 		}
-
-		json, _ := json.MarshalIndent(newResources, "", "  ")
-		os.Stdout.Write(json)
-
-		fmt.Println("-----")
-		log.Fatal("DIE")
 	}
+
+	json, _ := json.MarshalIndent(newResources, "", "  ")
+	os.Stdout.Write(json)
 }

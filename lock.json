@@ -1,5 +1,5 @@
 {
-    "memo": "f17dc86158527700ce518a7db45cbc9de0dc19f69d8c720207b1028b0500a0e6",
+    "memo": "5e5562060badbf1660e42f68610c1fc62c131690729d0f5563739b157dc1aaeb",
     "projects": [
         {
             "name": "github.com/apparentlymart/go-cidr",
@@ -11,8 +11,8 @@
         },
         {
             "name": "github.com/aws/aws-sdk-go",
-            "version": "v1.7.9",
-            "revision": "695fe24acaf9afe80b0ce261d4637f42ba0b4c7d",
+            "version": "v1.8.1",
+            "revision": "72df63b404d3f9820db08c73176c1b277d9f614f",
             "packages": [
                 "aws",
                 "aws/awserr",
@@ -31,12 +31,13 @@
                 "aws/session",
                 "aws/signer/v4",
                 "private/protocol",
+                "private/protocol/ec2query",
                 "private/protocol/query",
                 "private/protocol/query/queryutil",
                 "private/protocol/rest",
                 "private/protocol/restxml",
                 "private/protocol/xml/xmlutil",
-                "private/waiter",
+                "service/ec2",
                 "service/s3",
                 "service/sts"
             ]
