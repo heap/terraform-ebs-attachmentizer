@@ -6,11 +6,13 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/terraform/flatmap"
 	tf "github.com/hashicorp/terraform/terraform"
 	tfhash "github.com/hashicorp/terraform/helper/hashcode"
 	tfstate "github.com/hashicorp/terraform/state"
+	// "github.com/davecgh/go-spew/spew"
 
 	"blkdev2volatt/common"
 	"blkdev2volatt/ec2"
@@ -91,7 +93,7 @@ func TFStateStuff(fn string, instDevMap ec2.InstanceDeviceMap) {
 	localState.RefreshState()
 	root := localState.State().Modules[0]
 
-	var newResources []*tf.ResourceState
+	newResources := make(map[string]*tf.ResourceState)
 
 	for name, res := range root.Resources {
 		if res.Type != "aws_instance" {
@@ -108,6 +110,9 @@ func TFStateStuff(fn string, instDevMap ec2.InstanceDeviceMap) {
 		interfaceDevices, ok := flatmap.Expand(
 			res.Primary.Attributes,
 			"ebs_block_device").([]interface{})
+
+		attrs := flatmap.Map(res.Primary.Attributes)
+		attrs.Delete("ebs_block_device")
 
 
 		if !ok {
@@ -126,10 +131,15 @@ func TFStateStuff(fn string, instDevMap ec2.InstanceDeviceMap) {
 			volumeRes := makeVolumeRes(devMap[devName], dev)
 			volumeID := volumeRes.Primary.ID
 			attachmentRes := makeAttachmentRes(instanceName, instanceID, volumeID, dev)
-			newResources = append(newResources, volumeRes, attachmentRes)
+			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, strings.TrimPrefix(devName, "/dev/"))] = volumeRes
+			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, strings.TrimPrefix(devName, "/dev/"))] = attachmentRes
 		}
 	}
 
-	json, _ := json.MarshalIndent(newResources, "", "  ")
+	for k, v := range newResources {
+		root.Resources[k] = v
+	}
+
+	json, _ := json.MarshalIndent(root.Resources, "", "  ")
 	os.Stdout.Write(json)
 }

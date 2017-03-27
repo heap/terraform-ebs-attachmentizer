@@ -1,5 +1,8 @@
 package terraform
 
+// Annoyingly, a couple of things like the size have different attribute names
+// on the different reosurce types.
+
 // aws_ebs_volume attributes from
 //    https://github.com/hashicorp/terraform/blob/ef94acbf1f753dd1d03d3249cd58f4876cd19682/builtin/providers/aws/resource_aws_ebs_volume.go#L27-L68
 var awsEbsVolumeAttrs = map[string]struct{}{
