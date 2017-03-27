@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/hashicorp/terraform/flatmap"
 	tf "github.com/hashicorp/terraform/terraform"
@@ -70,6 +69,8 @@ dev map[string]string) *tf.ResourceState {
 	return newRes
 }
 
+// Type conversion for some []interface{} we know is actually a
+// []map[string]interface{}, and convert all the values to strings.
 // TODO: This must be easier with some kind of reflection thing.
 func mapify(slice []interface{}) ([]map[string]string, bool) {
 	var output []map[string]string
@@ -124,15 +125,15 @@ func TFStateStuff(fn string, instDevMap ec2.InstanceDeviceMap) {
 			log.Fatalf("Could not mapify")
 		}
 		for _, dev := range devices {
-			dev["device_name"] = common.NormalizeDeviceName(dev["device_name"])
+			dev["device_name"] = common.NewDeviceName(dev["device_name"]).LongName()
 		}
 		for _, dev := range devices {
-			devName := common.NormalizeDeviceName(dev["device_name"])
+			devName := common.NewDeviceName(dev["device_name"])
 			volumeRes := makeVolumeRes(devMap[devName], dev)
 			volumeID := volumeRes.Primary.ID
 			attachmentRes := makeAttachmentRes(instanceName, instanceID, volumeID, dev)
-			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, strings.TrimPrefix(devName, "/dev/"))] = volumeRes
-			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, strings.TrimPrefix(devName, "/dev/"))] = attachmentRes
+			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, devName.ShortName())] = volumeRes
+			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, devName.ShortName())] = attachmentRes
 		}
 	}
 

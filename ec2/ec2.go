@@ -20,7 +20,7 @@ func nameFilter(inst string) *ec2.Filter {
 	}
 }
 
-type InstanceDeviceMap map[string]map[string]string
+type InstanceDeviceMap map[string]map[common.DeviceName]string
 
 func EC2Stuff(inst string) InstanceDeviceMap {
 	sess, err := session.NewSession()
@@ -42,10 +42,10 @@ func EC2Stuff(inst string) InstanceDeviceMap {
 	instDevMap := make(InstanceDeviceMap)
 	for _, resv := range resp.Reservations {
 		for _, inst := range resv.Instances {
-			devMap := make(map[string]string)
+			devMap := make(map[common.DeviceName]string)
 			instDevMap[*inst.InstanceId] = devMap
 			for _, blkDev := range inst.BlockDeviceMappings {
-				devMap[common.NormalizeDeviceName(*blkDev.DeviceName)] = *blkDev.Ebs.VolumeId
+				devMap[common.NewDeviceName(*blkDev.DeviceName)] = *blkDev.Ebs.VolumeId
 			}
 		}
 	}
