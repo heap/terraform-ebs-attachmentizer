@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"blkdev2volatt/ec2"
-	"blkdev2volatt/terraform"
+	"github.com/heap/blkdev2volatt/ec2"
+	"github.com/heap/blkdev2volatt/terraform"
 	// "github.com/davecgh/go-spew/spew"
 )
 

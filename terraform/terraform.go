@@ -13,8 +13,8 @@ import (
 	tfstate "github.com/hashicorp/terraform/state"
 	// "github.com/davecgh/go-spew/spew"
 
-	"blkdev2volatt/common"
-	"blkdev2volatt/ec2"
+	"github.com/heap/blkdev2volatt/common"
+	"github.com/heap/blkdev2volatt/ec2"
 )
 
 // From

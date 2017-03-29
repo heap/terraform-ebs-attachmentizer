@@ -4,7 +4,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"blkdev2volatt/common"
+
+	"github.com/heap/blkdev2volatt/common"
 )
 
 type volAtt struct {
