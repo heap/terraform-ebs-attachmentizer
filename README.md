@@ -88,6 +88,15 @@ the high level view is
   fact that either Terraform or AWS lets you call a device either `/dev/xvdb` or
   `xvdb` and "does the right thing".
 
+This project uses Terraform as a library, and uses the official AWS Go SDK. The
+godoc for these will be handy:
+
+- [AWS SDK's EC2 package](https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/)
+- [Terraform's State type](https://godoc.org/github.com/hashicorp/terraform/terraform#State)
+
+It's also *really* instructive to look at some tfstate files and compare to the
+corresponding Terraform config.
+
 ### Building
 
 You'll need to place this in the right place in your `GOPATH`. After that, it
