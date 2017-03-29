@@ -1,3 +1,4 @@
+// Package terraform handles reading and modifying Terraform state.
 package terraform
 
 import (
@@ -17,6 +18,8 @@ import (
 	"github.com/heap/blkdev2volatt/ec2"
 )
 
+// Get the ID Terraform synthesises for a volume attachment.
+//
 // From
 //    https://github.com/hashicorp/terraform/blob/ef94acbf1f753dd1d03d3249cd58f4876cd19682/builtin/providers/aws/resource_aws_volume_attachment.go#L244-L251
 // with hat-tip to:
@@ -31,6 +34,10 @@ func volumeAttachmentID(name, volumeID, instanceID string) string {
 	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
 }
 
+// Make a Terraform `aws_ebs_volume` resource from the attributes from an
+// `ebs_block_device` block.
+// TODO: Availability zone needs to be added; some attributes need to be
+// translated; see comment at top of attrs.go.
 func makeVolumeRes(volID string, dev map[string]string) *tf.ResourceState {
 	var attrs = make(map[string]string)
 	for k, v := range dev {
@@ -48,6 +55,8 @@ func makeVolumeRes(volID string, dev map[string]string) *tf.ResourceState {
 	return newRes
 }
 
+// Make a Terraform `aws_volume_attachment` resource from the attributes from an
+// `ebs_block_device` block and the instance and volume IDs.
 func makeAttachmentRes(instanceName, instanceID, volumeID string,
 dev map[string]string) *tf.ResourceState {
 	attrs := make(map[string]string)
@@ -56,6 +65,7 @@ dev map[string]string) *tf.ResourceState {
 			attrs[k] = fmt.Sprintf("%v", v)
 		}
 	}
+
 	attrs["instance_id"] = instanceID
 	attrs["volume_id"] = volumeID
 	newRes := &tf.ResourceState{
@@ -89,8 +99,10 @@ func mapify(slice []interface{}) ([]map[string]string, bool) {
 	return output, true
 }
 
-func TFStateStuff(fn string, instDevMap ec2.InstanceDeviceMap) {
-	localState := tfstate.LocalState{Path: fn, PathOut: "/tmp/out.tfstate"}
+// Do The Conversion on the Terraform state file given the extra resource ID
+// information from EC2.
+func TFStateStuff(stateFilePath string, instDevMap ec2.InstanceDeviceMap) {
+	localState := tfstate.LocalState{Path: stateFilePath, PathOut: "/tmp/out.tfstate"}
 	localState.RefreshState()
 	root := localState.State().Modules[0]
 

@@ -1,3 +1,4 @@
+// Package ec2 handles collecting volume and instance information from EC2.
 package ec2
 
 import (
@@ -12,18 +13,22 @@ type volAtt struct {
 	name, instance, volume, device string
 }
 
-func nameFilter(inst string) *ec2.Filter {
+// Build a filter on the instance `Name` tags. A `*` wildcard is allowed.
+func nameFilter(instanceNamePattern string) *ec2.Filter {
 	return &ec2.Filter{
 		Name: aws.String("tag:Name"),
 		Values: []*string{
-			aws.String(inst),
+			aws.String(instanceNamePattern),
 		},
 	}
 }
 
+// Map from instance ID to a mapping from device name to volume ID.
 type InstanceDeviceMap map[string]map[common.DeviceName]string
 
-func EC2Stuff(inst string) InstanceDeviceMap {
+// Connect to EC2 and create the `InstanceDeviceMap` for instances matching the
+// pattern.
+func EC2Stuff(instanceNamePattern string) InstanceDeviceMap {
 	sess, err := session.NewSession()
 	if err != nil {
 		panic(err.Error())
@@ -32,7 +37,7 @@ func EC2Stuff(inst string) InstanceDeviceMap {
 
 	params := &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{
-			nameFilter(inst),
+			nameFilter(instanceNamePattern),
 		},
 	}
 	resp, err:= svc.DescribeInstances(params)
@@ -42,10 +47,10 @@ func EC2Stuff(inst string) InstanceDeviceMap {
 
 	instDevMap := make(InstanceDeviceMap)
 	for _, resv := range resp.Reservations {
-		for _, inst := range resv.Instances {
+		for _, instance := range resv.Instances {
 			devMap := make(map[common.DeviceName]string)
-			instDevMap[*inst.InstanceId] = devMap
-			for _, blkDev := range inst.BlockDeviceMappings {
+			instDevMap[*instance.InstanceId] = devMap
+			for _, blkDev := range instance.BlockDeviceMappings {
 				devMap[common.NewDeviceName(*blkDev.DeviceName)] = *blkDev.Ebs.VolumeId
 			}
 		}

@@ -5,15 +5,98 @@ and `aws_volume_attachment` resources.
 
 (I'm bad at names.)
 
+## Why
 
-## Building
+Terraform lets you represent the EBS volumes attached to an instance in two
+ways. The first is as `ebs_block_device` blocks directly in the instance
+resource:
 
-Should build with
+    resource "aws_instance" "my_instance" {
+        ...
+        ebs_block_device {
+            size = 100
+            type = "gp2"
+            device_name = "/dev/xvdb"
+        }
+
+        ebs_block_device {
+            size = 500
+            type = "gp2"
+            device_name = "/dev/xvdc"
+        }
+        ...
+    }
+
+The second is as `aws_ebs_volume` resources, with an `aws_volume_attachment`
+each to attach them to an instance:
+
+    resource "aws_instance" "my_instance" {
+        ...
+    }
+
+    resource "aws_ebs_volume" "vol1" {
+        size = 100
+        type = "gp2"
+        availability_zone = "${aws_instance.my_instance.availability_zone}"
+    }
+
+    resource "aws_ebs_volume" "vol2" {
+        size = 500
+        type = "gp2"
+        availability_zone = "${aws_instance.my_instance.availability_zone}"
+    }
+
+    resource "aws_volume_attachment" "vol1" {
+        instance_id = "${aws_instance.my_instance.id}"
+        volume_id = "${aws_ebs_volume.vol1.id}"
+        device_name = "/dev/xvdb"
+    }
+
+    resource "aws_volume_attachment" "vol2" {
+        instance_id = "${aws_instance.my_instance.id}"
+        volume_id = "${aws_ebs_volume.vol2.id}"
+        device_name = "/dev/xvdc"
+    }
+
+The first is obviously less verbose, but has the drawback of making it
+impossible to add or remove EBS volumes via Terraform. With the second, it's
+easy: just delete the `aws_volume_attachment` resource.
+
+
+## How
+
+The tl;dr is:
+
+1. gather volume and instance data from AWS
+2. read the Terraform state file
+3. remove the `ebs_block_device` blocks from the state file, and add the new
+   resources
+
+Ideally we could do this without access to AWS, but the Terraform state doesn't
+include the volume IDs when you use `ebs_block_device` blocks. So read-only
+access to EC2 is required.
+
+
+## Development
+
+The modules and packages have some doc comments explaining what's in each, but
+the high level view is
+
+- package `terraform` handles reading of Terraform state
+- package `ec2` handles reading from the AWS API
+- package `common` has some common things like a utilty for dealing with the
+  fact that either Terraform or AWS lets you call a device either `/dev/xvdb` or
+  `xvdb` and "does the right thing".
+
+### Building
+
+You'll need to place this in the right place in your `GOPATH`. After that, it
+should build with
 
     go build -i
 
 
-## Dependencies
+### Dependencies
 
 Using [dep][0] despite its non-production status because it's the first one
 I tried that I could make work.
