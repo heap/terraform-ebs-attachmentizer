@@ -1,5 +1,4 @@
-// Package terraform handles reading and modifying Terraform state.
-package terraform
+package blkdev2volatt
 
 import (
 	"bytes"
@@ -14,9 +13,6 @@ import (
 	tfhash "github.com/hashicorp/terraform/helper/hashcode"
 	tfstate "github.com/hashicorp/terraform/state"
 	// "github.com/davecgh/go-spew/spew"
-
-	"github.com/heap/blkdev2volatt/common"
-	// "github.com/heap/blkdev2volatt/ec2"
 )
 
 // Get the ID Terraform synthesises for a volume attachment.
@@ -39,7 +35,7 @@ func volumeAttachmentID(name, volumeID, instanceID string) string {
 // `ebs_block_device` block.
 // TODO: Availability zone needs to be added; some attributes need to be
 // translated; see comment at top of attrs.go.
-func makeVolumeRes(dev common.BlockDevice) *tf.ResourceState {
+func makeVolumeRes(dev BlockDevice) *tf.ResourceState {
 	var attrs = make(map[string]string)
 	attrs["size"] = strconv.Itoa(dev.Size)
 	// TODO verify attrs
@@ -55,7 +51,7 @@ func makeVolumeRes(dev common.BlockDevice) *tf.ResourceState {
 
 // Make a Terraform `aws_volume_attachment` resource from the attributes from an
 // `ebs_block_device` block and the instance and volume IDs.
-func makeAttachmentRes(instanceName, instanceID string, devName common.DeviceName, dev common.BlockDevice) *tf.ResourceState {
+func makeAttachmentRes(instanceName, instanceID string, devName DeviceName, dev BlockDevice) *tf.ResourceState {
 	attrs := make(map[string]string)
 
 	// TODO verify attrs
@@ -94,14 +90,14 @@ func mapify(slice []interface{}) ([]map[string]string, bool) {
 	return output, true
 }
 
-func createDeviceMap(slice []map[string]string) (map[common.DeviceName]common.BlockDevice, error) {
-	output := make(map[common.DeviceName]common.BlockDevice)
+func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, error) {
+	output := make(map[DeviceName]BlockDevice)
 	for _, dev:= range slice {
 		size, err := strconv.Atoi(dev["volume_size"])
 		if err != nil {
 			return nil, err
 		}
-		output[common.NewDeviceName(dev["device_name"])] = common.BlockDevice{
+		output[NewDeviceName(dev["device_name"])] = BlockDevice{
 		    Type: dev["device_type"],
 			Size: size,
 		}
@@ -111,7 +107,7 @@ func createDeviceMap(slice []map[string]string) (map[common.DeviceName]common.Bl
 
 // Do The Conversion on the Terraform state file given the extra resource ID
 // information from EC2.
-func TFStateStuff(stateFilePath string, instMap map[string]common.Instance) {
+func TFStateStuff(stateFilePath string, instMap map[string]Instance) {
 	localState := tfstate.LocalState{Path: stateFilePath, PathOut: "/tmp/out.tfstate"}
 	localState.RefreshState()
 	root := localState.State().Modules[0]

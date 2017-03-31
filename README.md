@@ -79,14 +79,14 @@ access to EC2 is required.
 
 ## Development
 
-The modules and packages have some doc comments explaining what's in each, but
-the high level view is
+The files have some doc comments explaining what's in each, but the high
+level view is
 
-- package `terraform` handles reading of Terraform state
-- package `ec2` handles reading from the AWS API
-- package `common` has some common things like a utilty for dealing with the
-  fact that either Terraform or AWS lets you call a device either `/dev/xvdb` or
-  `xvdb` and "does the right thing".
+- `terraform.go` handles reading of Terraform state
+- `ec2.go` handles reading from the AWS API
+- `common.go` has some common things like a utilty for dealing with the
+  fact that either Terraform or AWS lets you call a device either
+  `/dev/xvdb` or `xvdb` and "does the right thing".
 
 This project uses Terraform as a library, and uses the official AWS Go SDK. The
 godoc for these will be handy:

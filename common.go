@@ -1,4 +1,4 @@
-package common
+package blkdev2volatt
 
 import (
 	"fmt"

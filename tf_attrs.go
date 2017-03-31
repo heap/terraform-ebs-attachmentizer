@@ -1,6 +1,6 @@
-package terraform
+package blkdev2volatt
 
-// This module contains all the attributes that the resrouces and blocks have in
+// This file contains all the attributes that the resrouces and blocks have in
 // Terraform, represented as set-like maps.
 
 // Annoyingly, a couple of things like the size have different attribute names
