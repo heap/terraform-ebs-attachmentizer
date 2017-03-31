@@ -4,7 +4,7 @@ package ec2
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
+	awsec2 "github.com/aws/aws-sdk-go/service/ec2"
 
 	"github.com/heap/blkdev2volatt/common"
 )
@@ -14,8 +14,8 @@ type volAtt struct {
 }
 
 // Build a filter on the instance `Name` tags. A `*` wildcard is allowed.
-func nameFilter(instanceNamePattern string) *ec2.Filter {
-	return &ec2.Filter{
+func nameFilter(instanceNamePattern string) *awsec2.Filter {
+	return &awsec2.Filter{
 		Name: aws.String("tag:Name"),
 		Values: []*string{
 			aws.String(instanceNamePattern),
@@ -26,34 +26,50 @@ func nameFilter(instanceNamePattern string) *ec2.Filter {
 // Map from instance ID to a mapping from device name to volume ID.
 type InstanceDeviceMap map[string]map[common.DeviceName]string
 
-// Connect to EC2 and create the `InstanceDeviceMap` for instances matching the
-// pattern.
-func EC2Stuff(instanceNamePattern string) InstanceDeviceMap {
-	sess, err := session.NewSession()
-	if err != nil {
-		panic(err.Error())
-	}
-	svc := ec2.New(sess, &aws.Config{Region: aws.String("us-east-1")})
+type EC2Interface interface {
+	GetInstances(instanceNamePattern string) (map[string]common.Instance, error)
+}
 
-	params := &ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
+type EC2 struct {
+	svc *awsec2.EC2
+}
+
+func (ec2 *EC2) GetInstances(instanceNamePattern string) (map[string]common.Instance, error) {
+	params := &awsec2.DescribeInstancesInput{
+		Filters: []*awsec2.Filter{
 			nameFilter(instanceNamePattern),
 		},
 	}
-	resp, err:= svc.DescribeInstances(params)
+	resp, err:= ec2.svc.DescribeInstances(params)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
 
-	instDevMap := make(InstanceDeviceMap)
+	instMap := make(map[string]common.Instance)
 	for _, resv := range resp.Reservations {
 		for _, instance := range resv.Instances {
-			devMap := make(map[common.DeviceName]string)
-			instDevMap[*instance.InstanceId] = devMap
+			id := *instance.InstanceId
+			devMap := make(map[common.DeviceName]common.BlockDevice)
 			for _, blkDev := range instance.BlockDeviceMappings {
-				devMap[common.NewDeviceName(*blkDev.DeviceName)] = *blkDev.Ebs.VolumeId
+				devMap[common.NewDeviceName(*blkDev.DeviceName)] = common.BlockDevice{
+					ID: blkDev.Ebs.VolumeId,
+				}
 			}
+			instMap[id] = common.Instance{ID: id, BlockDevices: devMap}
 		}
 	}
-	return instDevMap
+	return instMap, nil
+}
+
+// Connect to EC2 and create the `InstanceDeviceMap` for instances matching the
+// pattern.
+func EC2Stuff(instanceNamePattern string) (map[string]common.Instance, error)  {
+	sess, err := session.NewSession()
+	if err != nil {
+		return nil, err
+	}
+
+	ec2 := EC2{svc: awsec2.New(sess, &aws.Config{Region: aws.String("us-east-1")})}
+
+	return ec2.GetInstances(instanceNamePattern)
 }

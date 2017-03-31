@@ -14,12 +14,14 @@ func normalizeDeviceName(dev string) string {
 	}
 }
 
-func NewDeviceName(dev string) DeviceName {
-	return DeviceName{normalizeDeviceName(dev)}
-}
-
+// A wrapper around a device name that allows getting it with and without the
+// `/dev/` prefix.
 type DeviceName struct {
 	longName string
+}
+
+func NewDeviceName(dev string) DeviceName {
+	return DeviceName{normalizeDeviceName(dev)}
 }
 
 // Without `/dev/`.
@@ -34,4 +36,16 @@ func (dn DeviceName) LongName() string {
 
 func (dn DeviceName) String() string {
 	return dn.longName
+}
+
+type Instance struct {
+	ID string
+	BlockDevices map[DeviceName]BlockDevice
+}
+
+type BlockDevice struct {
+	// Pointer so it can be nil in the case where we don't know what it is.
+	ID *string
+	Size int
+	Type string
 }

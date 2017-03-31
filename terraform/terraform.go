@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/hashicorp/terraform/flatmap"
 	tf "github.com/hashicorp/terraform/terraform"
@@ -15,7 +16,7 @@ import (
 	// "github.com/davecgh/go-spew/spew"
 
 	"github.com/heap/blkdev2volatt/common"
-	"github.com/heap/blkdev2volatt/ec2"
+	// "github.com/heap/blkdev2volatt/ec2"
 )
 
 // Get the ID Terraform synthesises for a volume attachment.
@@ -38,17 +39,14 @@ func volumeAttachmentID(name, volumeID, instanceID string) string {
 // `ebs_block_device` block.
 // TODO: Availability zone needs to be added; some attributes need to be
 // translated; see comment at top of attrs.go.
-func makeVolumeRes(volID string, dev map[string]string) *tf.ResourceState {
+func makeVolumeRes(dev common.BlockDevice) *tf.ResourceState {
 	var attrs = make(map[string]string)
-	for k, v := range dev {
-		if _, ok := awsEbsVolumeAttrs[k]; ok {
-			attrs[k] = v
-		}
-	}
+	attrs["size"] = strconv.Itoa(dev.Size)
+	// TODO verify attrs
 	newRes := &tf.ResourceState{
 		Type: "aws_ebs_volume",
 		Primary: &tf.InstanceState{
-			ID: volID,
+			ID: *dev.ID,
 			Attributes: attrs,
 		},
 	}
@@ -57,22 +55,19 @@ func makeVolumeRes(volID string, dev map[string]string) *tf.ResourceState {
 
 // Make a Terraform `aws_volume_attachment` resource from the attributes from an
 // `ebs_block_device` block and the instance and volume IDs.
-func makeAttachmentRes(instanceName, instanceID, volumeID string,
-dev map[string]string) *tf.ResourceState {
+func makeAttachmentRes(instanceName, instanceID string, devName common.DeviceName, dev common.BlockDevice) *tf.ResourceState {
 	attrs := make(map[string]string)
-	for k, v := range dev {
-		if _, ok := awsVolumeAttachmentAttrs[k]; ok {
-			attrs[k] = fmt.Sprintf("%v", v)
-		}
-	}
 
+	// TODO verify attrs
+	attrs["device_name"] = devName.LongName()
 	attrs["instance_id"] = instanceID
-	attrs["volume_id"] = volumeID
+	attrs["volume_id"] = *dev.ID
+
 	newRes := &tf.ResourceState{
 		Type: "aws_volume_attachment",
 		Primary: &tf.InstanceState{
 			// TODO: Generate this correctly.
-			ID: volumeAttachmentID(instanceName, volumeID, instanceID),
+			ID: volumeAttachmentID(instanceName, *dev.ID, instanceID),
 			Attributes: attrs,
 		},
 	}
@@ -99,9 +94,24 @@ func mapify(slice []interface{}) ([]map[string]string, bool) {
 	return output, true
 }
 
+func createDeviceMap(slice []map[string]string) (map[common.DeviceName]common.BlockDevice, error) {
+	output := make(map[common.DeviceName]common.BlockDevice)
+	for _, dev:= range slice {
+		size, err := strconv.Atoi(dev["volume_size"])
+		if err != nil {
+			return nil, err
+		}
+		output[common.NewDeviceName(dev["device_name"])] = common.BlockDevice{
+		    Type: dev["device_type"],
+			Size: size,
+		}
+	}
+	return output, nil
+}
+
 // Do The Conversion on the Terraform state file given the extra resource ID
 // information from EC2.
-func TFStateStuff(stateFilePath string, instDevMap ec2.InstanceDeviceMap) {
+func TFStateStuff(stateFilePath string, instMap map[string]common.Instance) {
 	localState := tfstate.LocalState{Path: stateFilePath, PathOut: "/tmp/out.tfstate"}
 	localState.RefreshState()
 	root := localState.State().Modules[0]
@@ -112,38 +122,39 @@ func TFStateStuff(stateFilePath string, instDevMap ec2.InstanceDeviceMap) {
 		if res.Type != "aws_instance" {
 			continue
 		}
-		devMap, ok := instDevMap[res.Primary.ID]
+		inst, ok := instMap[res.Primary.ID]
 		if !ok {
 			continue
 		}
 		instanceName := name
-		instanceRes := res
-		instanceID := instanceRes.Primary.ID
 
 		interfaceDevices, ok := flatmap.Expand(
 			res.Primary.Attributes,
 			"ebs_block_device").([]interface{})
 
-		attrs := flatmap.Map(res.Primary.Attributes)
-		attrs.Delete("ebs_block_device")
-
-
 		if !ok {
 			log.Fatalf("could not expand ebs_block_device for %v", name)
 		}
+
+		// Delete the `ebs_block_device`s from the instance's state.
+		attrs := flatmap.Map(res.Primary.Attributes)
+		attrs.Delete("ebs_block_device")
 
 		devices, ok := mapify(interfaceDevices)
 		if !ok {
 			log.Fatalf("Could not mapify")
 		}
-		for _, dev := range devices {
-			dev["device_name"] = common.NewDeviceName(dev["device_name"]).LongName()
+
+		devMap, err := createDeviceMap(devices)
+		if err != nil {
+			log.Fatalf("Could not create device map: %v", err)
 		}
-		for _, dev := range devices {
-			devName := common.NewDeviceName(dev["device_name"])
-			volumeRes := makeVolumeRes(devMap[devName], dev)
-			volumeID := volumeRes.Primary.ID
-			attachmentRes := makeAttachmentRes(instanceName, instanceID, volumeID, dev)
+
+		for devName, dev := range devMap {
+			// Merge in the volume ID.
+			dev.ID = inst.BlockDevices[devName].ID
+			volumeRes := makeVolumeRes(dev)
+			attachmentRes := makeAttachmentRes(instanceName, inst.ID, devName, dev)
 			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, devName.ShortName())] = volumeRes
 			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, devName.ShortName())] = attachmentRes
 		}
