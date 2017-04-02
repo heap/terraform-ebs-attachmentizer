@@ -20,10 +20,8 @@ func nameFilter(instanceNamePattern string) *ec2.Filter {
 	}
 }
 
-// Map from instance ID to a mapping from device name to volume ID.
-type InstanceDeviceMap map[string]map[DeviceName]string
-
 type EC2Interface interface {
+	// Get the instances matching the pattern, keyed by their ID.
 	GetInstances(instanceNamePattern string) (map[string]Instance, error)
 }
 

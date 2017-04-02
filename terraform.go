@@ -116,10 +116,13 @@ func TFStateStuff(stateFilePath string, instMap map[string]Instance) {
 
 	for name, res := range root.Resources {
 		if res.Type != "aws_instance" {
+			// Do nothing if the resource isn't an instance.
 			continue
 		}
 		inst, ok := instMap[res.Primary.ID]
 		if !ok {
+			// Do nothing if the instance wasn't one of the ones that the EC2
+			// query returned.
 			continue
 		}
 		instanceName := name
