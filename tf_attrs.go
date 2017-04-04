@@ -1,4 +1,4 @@
-package blkdev2volatt
+package main
 
 // This file contains all the attributes that the resrouces and blocks have in
 // Terraform, represented as set-like maps.
