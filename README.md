@@ -5,6 +5,16 @@ and `aws_volume_attachment` resources.
 
 (I'm bad at names.)
 
+
+## Usage
+
+    blkdev2volatt INSTANCE STATEFILE
+
+- `INSTANCE` is the value of the `Name` tag in EC2 for the instance to act
+  on. It may be a pattern like `something-*`, in which case all matching
+  instances will be modified.
+- `STATEFILE` is the path of a `terraform.tfstate` file.
+
 ## Why
 
 Terraform lets you represent the EBS volumes attached to an instance in two
