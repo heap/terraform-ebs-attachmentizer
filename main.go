@@ -1,4 +1,4 @@
-package blkdev2volatt
+package main
 
 import (
 	"log"
