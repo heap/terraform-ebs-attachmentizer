@@ -20,9 +20,17 @@ func TestMakeVolumeRes(t *testing.T) {
 	}{
 		{
 			BlockDevice{
-				ID:   sp("v-abcd"),
-				Size: 10,
-				Type: "gp2",
+				volumeID:   sp("v-abcd"),
+				size: 10,
+				volumeType: "gp2",
+        deleteOnTermination: "false",
+        deviceName: "xvdb",
+        encrypted: "false",
+        iops: 1500,
+        snapshotId: "",
+        instanceName: "instance01",
+        instanceID: sp("i-1d7683bd"),
+        availabilityZone: sp("us-east-1"),
 			},
 			tf.ResourceState{
 				Type: "aws_ebs_volume",
@@ -31,6 +39,10 @@ func TestMakeVolumeRes(t *testing.T) {
 					Attributes: map[string]string{
 						"size": "10",
 						"type": "gp2",
+            "id": "v-abcd",
+            "encrypted": "false",
+            "availability_zone": "us-east-1",
+            "snapshot_id": "",
 					},
 				},
 			},

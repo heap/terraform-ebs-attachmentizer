@@ -12,7 +12,7 @@ import (
 	tf "github.com/hashicorp/terraform/terraform"
 	tfhash "github.com/hashicorp/terraform/helper/hashcode"
 	tfstate "github.com/hashicorp/terraform/state"
-	// "github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 )
 
 // Get the ID Terraform synthesises for a volume attachment.
@@ -22,11 +22,11 @@ import (
 // with hat-tip to:
 //  - https://github.com/hashicorp/terraform/issues/8458#issuecomment-258831650
 //  - https://github.com/foxsy/tfvolattid
-func volumeAttachmentID(name, volumeID, instanceID string) string {
+func volumeAttachmentID(dev BlockDevice) string {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("%s-", name))
-	buf.WriteString(fmt.Sprintf("%s-", instanceID))
-	buf.WriteString(fmt.Sprintf("%s-", volumeID))
+	buf.WriteString(fmt.Sprintf("%s-", dev.instanceName))
+	buf.WriteString(fmt.Sprintf("%s-", *dev.instanceID))
+	buf.WriteString(fmt.Sprintf("%s-", *dev.volumeID))
 
 	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
 }
@@ -37,13 +37,18 @@ func volumeAttachmentID(name, volumeID, instanceID string) string {
 // translated; see comment at top of attrs.go.
 func makeVolumeRes(dev BlockDevice) *tf.ResourceState {
 	var attrs = make(map[string]string)
-	attrs["size"] = strconv.Itoa(dev.Size)
-	attrs["type"] = dev.Type
+	attrs["size"] = strconv.Itoa(dev.size)
+	attrs["type"] = dev.volumeType
+  attrs["id"] = *dev.volumeID
+  attrs["encrypted"] = dev.encrypted
+  attrs["availability_zone"] = *dev.availabilityZone
+  attrs["snapshot_id"] = dev.snapshotId
+
 	// TODO verify attrs
 	newRes := &tf.ResourceState{
 		Type: "aws_ebs_volume",
 		Primary: &tf.InstanceState{
-			ID: *dev.ID,
+			ID: *dev.volumeID,
 			Attributes: attrs,
 		},
 	}
@@ -51,20 +56,22 @@ func makeVolumeRes(dev BlockDevice) *tf.ResourceState {
 }
 
 // Make a Terraform `aws_volume_attachment` resource from the attributes from an
-// `ebs_block_device` block and the instance and volume IDs.
-func makeAttachmentRes(instanceName, instanceID string, devName DeviceName, dev BlockDevice) *tf.ResourceState {
+// `ebs_block_device` block, which incldues the relevant instance information.
+func makeAttachmentRes(dev BlockDevice) *tf.ResourceState {
 	attrs := make(map[string]string)
+  attachmentName := volumeAttachmentID(dev)
 
 	// TODO verify attrs
-	attrs["device_name"] = devName.LongName()
-	attrs["instance_id"] = instanceID
-	attrs["volume_id"] = *dev.ID
+	attrs["device_name"] = dev.deviceName
+	attrs["instance_id"] = *dev.instanceID
+	attrs["volume_id"] = *dev.volumeID
+  attrs["id"] = attachmentName
 
 	newRes := &tf.ResourceState{
 		Type: "aws_volume_attachment",
 		Primary: &tf.InstanceState{
 			// TODO: Generate this correctly.
-			ID: volumeAttachmentID(instanceName, *dev.ID, instanceID),
+			ID: attachmentName,
 			Attributes: attrs,
 		},
 	}
@@ -98,9 +105,11 @@ func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, err
 		if err != nil {
 			return nil, err
 		}
-		output[NewDeviceName(dev["device_name"])] = BlockDevice{
-		    Type: dev["device_type"],
-			Size: size,
+    deviceName := NewDeviceName(dev["device_name"])
+		output[deviceName] = BlockDevice{
+      deviceName: deviceName.LongName(),
+		  volumeType: dev["device_type"],
+			size: size,
 		}
 	}
 	return output, nil
@@ -108,7 +117,7 @@ func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, err
 
 // Do The Conversion on the Terraform state file given the extra resource ID
 // information from EC2.
-func TFStateStuff(stateFilePath string, instMap map[string]Instance) {
+func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 	localState := tfstate.LocalState{Path: stateFilePath, PathOut: "/tmp/out.tfstate"}
 	localState.RefreshState()
 	root := localState.State().Modules[0]
@@ -126,11 +135,12 @@ func TFStateStuff(stateFilePath string, instMap map[string]Instance) {
 			// query returned.
 			continue
 		}
-		instanceName := name
 
 		interfaceDevices, ok := flatmap.Expand(
 			res.Primary.Attributes,
 			"ebs_block_device").([]interface{})
+
+    spew.Dump(interfaceDevices)
 
 		if !ok {
 			log.Fatalf("could not expand ebs_block_device for %v", name)
@@ -152,9 +162,9 @@ func TFStateStuff(stateFilePath string, instMap map[string]Instance) {
 
 		for devName, dev := range devMap {
 			// Merge in the volume ID.
-			dev.ID = inst.BlockDevices[devName].ID
+			dev.volumeID = inst.BlockDevices[devName].volumeID
 			volumeRes := makeVolumeRes(dev)
-			attachmentRes := makeAttachmentRes(instanceName, inst.ID, devName, dev)
+			attachmentRes := makeAttachmentRes(dev)
 			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, devName.ShortName())] = volumeRes
 			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, devName.ShortName())] = attachmentRes
 		}

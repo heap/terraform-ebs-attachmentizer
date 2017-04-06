@@ -47,7 +47,7 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 			devMap := make(map[DeviceName]BlockDevice)
 			for _, blkDev := range instance.BlockDeviceMappings {
 				devMap[NewDeviceName(*blkDev.DeviceName)] = BlockDevice{
-					ID: blkDev.Ebs.VolumeId,
+					volumeID: blkDev.Ebs.VolumeId,
 				}
 			}
 			instMap[id] = Instance{ID: id, BlockDevices: devMap}
@@ -58,7 +58,7 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 
 // Connect to EC2 and create the `InstanceDeviceMap` for instances matching the
 // pattern.
-func EC2Stuff(instanceNamePattern string) (map[string]Instance, error)  {
+func GetEC2AWSState(instanceNamePattern string) (map[string]Instance, error)  {
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, err

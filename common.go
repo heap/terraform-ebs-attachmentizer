@@ -43,9 +43,21 @@ type Instance struct {
 	BlockDevices map[DeviceName]BlockDevice
 }
 
+// This struct includes all attributes present in the tfstate representation of
+// a block device (in tf_attrs.go), as well as the ec2 instance attributes necessary
+// to generate the relevant ebs attachment resource.
 type BlockDevice struct {
-	// Pointer so it can be nil in the case where we don't know what it is.
-	ID *string
-	Size int
-	Type string
+	volumeID *string // Pointer so it can be nil in the case where we don't know what it is.
+	size int
+	volumeType string
+  deleteOnTermination string
+  deviceName string
+  encrypted string
+  iops int
+  snapshotId string
+
+  // Relevant instance information
+  instanceName string
+  instanceID *string
+  availabilityZone *string
 }
