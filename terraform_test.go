@@ -22,7 +22,6 @@ func TestMakeVolumeRes(t *testing.T) {
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
-				instanceName:        "instance01",
 				instanceID:          "i-1d7683bd",
 				availabilityZone:    "us-east-1",
 			},

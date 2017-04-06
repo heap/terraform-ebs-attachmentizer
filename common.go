@@ -60,7 +60,6 @@ type BlockDevice struct {
 	snapshotId          string
 
 	// Relevant instance information
-	instanceName     string
 	instanceID       string
 	availabilityZone string
 }

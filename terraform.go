@@ -8,7 +8,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/davecgh/go-spew/spew"
+	// "github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform/flatmap"
 	tfhash "github.com/hashicorp/terraform/helper/hashcode"
 	tfstate "github.com/hashicorp/terraform/state"
@@ -24,7 +24,7 @@ import (
 //  - https://github.com/foxsy/tfvolattid
 func volumeAttachmentID(dev BlockDevice) string {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("%s-", dev.instanceName))
+	buf.WriteString(fmt.Sprintf("%s-", dev.deviceName))
 	buf.WriteString(fmt.Sprintf("%s-", dev.instanceID))
 	buf.WriteString(fmt.Sprintf("%s-", dev.volumeID))
 
@@ -58,14 +58,36 @@ func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, err
 		if err != nil {
 			return nil, err
 		}
+		iops, err := strconv.Atoi(dev["iops"])
+		if err != nil {
+			return nil, err
+		}
 		deviceName := NewDeviceName(dev["device_name"])
 		output[deviceName] = BlockDevice{
-			deviceName: deviceName.LongName(),
-			volumeType: dev["device_type"],
-			size:       size,
+			size:                size,
+			volumeType:          dev["device_type"],
+			deleteOnTermination: dev["delete_on_termination"],
+			deviceName:          deviceName.LongName(),
+			encrypted:           dev["encrypted"],
+			iops:                iops,
+			snapshotId:          dev["snapshot_id"],
 		}
 	}
 	return output, nil
+}
+
+// Check if the fields we pulled from both EC2 and Terraform match. If there are
+// conflicts, something smells fishy and we shouldn't continue.
+func ValidateEC2andTFDevs(devFromTFState BlockDevice, devFromEC2 BlockDevice) {
+	// TODO - Implement this.
+}
+
+func mergeEC2andTFStateDevs(devFromTFState BlockDevice, devFromEC2 BlockDevice) BlockDevice {
+	dev := devFromTFState
+	dev.volumeID = devFromEC2.volumeID
+	dev.instanceID = devFromEC2.instanceID
+	dev.availabilityZone = devFromEC2.availabilityZone
+	return dev
 }
 
 // Do The Conversion on the Terraform state file given the extra resource ID
@@ -93,8 +115,6 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 			res.Primary.Attributes,
 			"ebs_block_device").([]interface{})
 
-		spew.Dump(interfaceDevices)
-
 		if !ok {
 			log.Fatalf("could not expand ebs_block_device for %v", name)
 		}
@@ -113,11 +133,15 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 			log.Fatalf("Could not create device map: %v", err)
 		}
 
-		for devName, dev := range devMap {
+		for devName, devFromTFState := range devMap {
 			// Merge in the volume ID.
-			dev.volumeID = inst.BlockDevices[devName].volumeID
+			devFromEC2Info := inst.BlockDevices[devName]
+			ValidateEC2andTFDevs(devFromTFState, devFromEC2Info)
+			dev := mergeEC2andTFStateDevs(devFromTFState, devFromEC2Info)
+
 			volumeRes := dev.makeVolumeRes()
 			attachmentRes := dev.makeAttachmentRes()
+
 			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, devName.ShortName())] = volumeRes
 			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, devName.ShortName())] = attachmentRes
 		}
