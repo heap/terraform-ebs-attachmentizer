@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
-  "strconv"
 
-  tf "github.com/hashicorp/terraform/terraform"
+	tf "github.com/hashicorp/terraform/terraform"
 )
 
 // TODO: make this more robust.
@@ -42,7 +42,7 @@ func (dn DeviceName) String() string {
 }
 
 type Instance struct {
-	ID string
+	ID           string
 	BlockDevices map[DeviceName]BlockDevice
 }
 
@@ -50,19 +50,19 @@ type Instance struct {
 // a block device (in tf_attrs.go), as well as the ec2 instance attributes necessary
 // to generate the relevant ebs attachment resource.
 type BlockDevice struct {
-	volumeID *string // Pointer so it can be nil in the case where we don't know what it is.
-	size int
-	volumeType string
-  deleteOnTermination string
-  deviceName string
-  encrypted string
-  iops int
-  snapshotId string
+	volumeID            *string // Pointer so it can be nil in the case where we don't know what it is.
+	size                int
+	volumeType          string
+	deleteOnTermination string
+	deviceName          string
+	encrypted           string
+	iops                int
+	snapshotId          string
 
-  // Relevant instance information
-  instanceName string
-  instanceID *string
-  availabilityZone *string
+	// Relevant instance information
+	instanceName     string
+	instanceID       *string
+	availabilityZone *string
 }
 
 // Make a Terraform `aws_ebs_volume` resource from the attributes from an
@@ -72,16 +72,16 @@ func (dev BlockDevice) makeVolumeRes() *tf.ResourceState {
 	var attrs = make(map[string]string)
 	attrs["size"] = strconv.Itoa(dev.size)
 	attrs["type"] = dev.volumeType
-  attrs["id"] = *dev.volumeID
-  attrs["encrypted"] = dev.encrypted
-  attrs["availability_zone"] = *dev.availabilityZone
-  attrs["snapshot_id"] = dev.snapshotId
+	attrs["id"] = *dev.volumeID
+	attrs["encrypted"] = dev.encrypted
+	attrs["availability_zone"] = *dev.availabilityZone
+	attrs["snapshot_id"] = dev.snapshotId
 
 	// TODO verify attrs
 	newRes := &tf.ResourceState{
 		Type: "aws_ebs_volume",
 		Primary: &tf.InstanceState{
-			ID: *dev.volumeID,
+			ID:         *dev.volumeID,
 			Attributes: attrs,
 		},
 	}
@@ -92,19 +92,19 @@ func (dev BlockDevice) makeVolumeRes() *tf.ResourceState {
 // `ebs_block_device` block, which incldues the relevant instance information.
 func (dev BlockDevice) makeAttachmentRes() *tf.ResourceState {
 	attrs := make(map[string]string)
-  attachmentName := volumeAttachmentID(dev)
+	attachmentName := volumeAttachmentID(dev)
 
 	// TODO verify attrs
 	attrs["device_name"] = dev.deviceName
 	attrs["instance_id"] = *dev.instanceID
 	attrs["volume_id"] = *dev.volumeID
-  attrs["id"] = attachmentName
+	attrs["id"] = attachmentName
 
 	newRes := &tf.ResourceState{
 		Type: "aws_volume_attachment",
 		Primary: &tf.InstanceState{
 			// TODO: Generate this correctly.
-			ID: attachmentName,
+			ID:         attachmentName,
 			Attributes: attrs,
 		},
 	}

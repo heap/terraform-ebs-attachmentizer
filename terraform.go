@@ -2,17 +2,17 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform/flatmap"
-	tf "github.com/hashicorp/terraform/terraform"
 	tfhash "github.com/hashicorp/terraform/helper/hashcode"
 	tfstate "github.com/hashicorp/terraform/state"
-	"github.com/davecgh/go-spew/spew"
+	tf "github.com/hashicorp/terraform/terraform"
 )
 
 // Get the ID Terraform synthesises for a volume attachment.
@@ -53,16 +53,16 @@ func mapify(slice []interface{}) ([]map[string]string, bool) {
 
 func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, error) {
 	output := make(map[DeviceName]BlockDevice)
-	for _, dev:= range slice {
+	for _, dev := range slice {
 		size, err := strconv.Atoi(dev["volume_size"])
 		if err != nil {
 			return nil, err
 		}
-    deviceName := NewDeviceName(dev["device_name"])
+		deviceName := NewDeviceName(dev["device_name"])
 		output[deviceName] = BlockDevice{
-      deviceName: deviceName.LongName(),
-		  volumeType: dev["device_type"],
-			size: size,
+			deviceName: deviceName.LongName(),
+			volumeType: dev["device_type"],
+			size:       size,
 		}
 	}
 	return output, nil
@@ -93,7 +93,7 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 			res.Primary.Attributes,
 			"ebs_block_device").([]interface{})
 
-    spew.Dump(interfaceDevices)
+		spew.Dump(interfaceDevices)
 
 		if !ok {
 			log.Fatalf("could not expand ebs_block_device for %v", name)

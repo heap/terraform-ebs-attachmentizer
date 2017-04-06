@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"os"
-
 	// "github.com/davecgh/go-spew/spew"
 )
 
