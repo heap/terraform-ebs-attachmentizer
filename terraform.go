@@ -38,6 +38,7 @@ func volumeAttachmentID(name, volumeID, instanceID string) string {
 func makeVolumeRes(dev BlockDevice) *tf.ResourceState {
 	var attrs = make(map[string]string)
 	attrs["size"] = strconv.Itoa(dev.Size)
+	attrs["type"] = dev.Type
 	// TODO verify attrs
 	newRes := &tf.ResourceState{
 		Type: "aws_ebs_volume",
