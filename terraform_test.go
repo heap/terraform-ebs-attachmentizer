@@ -7,12 +7,6 @@ import (
 	tf "github.com/hashicorp/terraform/terraform"
 )
 
-// Make a string pointer from a string. Works around Go not allowing you to
-// take address of a literal.
-func sp(s string) *string {
-	return &s
-}
-
 func TestMakeVolumeRes(t *testing.T) {
 	var testCases = []struct {
 		in  BlockDevice
@@ -20,7 +14,7 @@ func TestMakeVolumeRes(t *testing.T) {
 	}{
 		{
 			BlockDevice{
-				volumeID:            sp("v-abcd"),
+				volumeID:            "v-abcd",
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
@@ -29,8 +23,8 @@ func TestMakeVolumeRes(t *testing.T) {
 				iops:                1500,
 				snapshotId:          "",
 				instanceName:        "instance01",
-				instanceID:          sp("i-1d7683bd"),
-				availabilityZone:    sp("us-east-1"),
+				instanceID:          "i-1d7683bd",
+				availabilityZone:    "us-east-1",
 			},
 			tf.ResourceState{
 				Type: "aws_ebs_volume",

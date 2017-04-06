@@ -25,8 +25,8 @@ import (
 func volumeAttachmentID(dev BlockDevice) string {
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("%s-", dev.instanceName))
-	buf.WriteString(fmt.Sprintf("%s-", *dev.instanceID))
-	buf.WriteString(fmt.Sprintf("%s-", *dev.volumeID))
+	buf.WriteString(fmt.Sprintf("%s-", dev.instanceID))
+	buf.WriteString(fmt.Sprintf("%s-", dev.volumeID))
 
 	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
 }

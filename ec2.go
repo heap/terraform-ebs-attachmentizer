@@ -47,7 +47,7 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 			devMap := make(map[DeviceName]BlockDevice)
 			for _, blkDev := range instance.BlockDeviceMappings {
 				devMap[NewDeviceName(*blkDev.DeviceName)] = BlockDevice{
-					volumeID: blkDev.Ebs.VolumeId,
+					volumeID: *blkDev.Ebs.VolumeId,
 				}
 			}
 			instMap[id] = Instance{ID: id, BlockDevices: devMap}
