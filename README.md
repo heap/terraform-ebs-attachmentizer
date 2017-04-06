@@ -114,6 +114,12 @@ should build with
 
     go build -i
 
+### Running tests
+
+Run
+
+    go test
+
 
 ### Dependencies
 
