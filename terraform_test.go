@@ -50,7 +50,7 @@ func TestMakeVolumeRes(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		actual := makeVolumeRes(tt.in)
+		actual := tt.in.makeVolumeRes()
 		if !actual.Equal(&tt.out) {
 			actual, _ := json.MarshalIndent(actual, "", "  ")
 			expected, _ := json.MarshalIndent(tt.out, "", "  ")

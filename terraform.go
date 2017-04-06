@@ -31,53 +31,6 @@ func volumeAttachmentID(dev BlockDevice) string {
 	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
 }
 
-// Make a Terraform `aws_ebs_volume` resource from the attributes from an
-// `ebs_block_device` block.
-// TODO: Availability zone needs to be added; some attributes need to be
-// translated; see comment at top of attrs.go.
-func makeVolumeRes(dev BlockDevice) *tf.ResourceState {
-	var attrs = make(map[string]string)
-	attrs["size"] = strconv.Itoa(dev.size)
-	attrs["type"] = dev.volumeType
-  attrs["id"] = *dev.volumeID
-  attrs["encrypted"] = dev.encrypted
-  attrs["availability_zone"] = *dev.availabilityZone
-  attrs["snapshot_id"] = dev.snapshotId
-
-	// TODO verify attrs
-	newRes := &tf.ResourceState{
-		Type: "aws_ebs_volume",
-		Primary: &tf.InstanceState{
-			ID: *dev.volumeID,
-			Attributes: attrs,
-		},
-	}
-	return newRes
-}
-
-// Make a Terraform `aws_volume_attachment` resource from the attributes from an
-// `ebs_block_device` block, which incldues the relevant instance information.
-func makeAttachmentRes(dev BlockDevice) *tf.ResourceState {
-	attrs := make(map[string]string)
-  attachmentName := volumeAttachmentID(dev)
-
-	// TODO verify attrs
-	attrs["device_name"] = dev.deviceName
-	attrs["instance_id"] = *dev.instanceID
-	attrs["volume_id"] = *dev.volumeID
-  attrs["id"] = attachmentName
-
-	newRes := &tf.ResourceState{
-		Type: "aws_volume_attachment",
-		Primary: &tf.InstanceState{
-			// TODO: Generate this correctly.
-			ID: attachmentName,
-			Attributes: attrs,
-		},
-	}
-	return newRes
-}
-
 // Type conversion for some []interface{} we know is actually a
 // []map[string]interface{}, and convert all the values to strings.
 // TODO: This must be easier with some kind of reflection thing.
@@ -163,8 +116,8 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 		for devName, dev := range devMap {
 			// Merge in the volume ID.
 			dev.volumeID = inst.BlockDevices[devName].volumeID
-			volumeRes := makeVolumeRes(dev)
-			attachmentRes := makeAttachmentRes(dev)
+			volumeRes := dev.makeVolumeRes()
+			attachmentRes := dev.makeAttachmentRes()
 			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, devName.ShortName())] = volumeRes
 			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, devName.ShortName())] = attachmentRes
 		}
