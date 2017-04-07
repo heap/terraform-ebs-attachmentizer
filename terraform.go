@@ -60,16 +60,49 @@ func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, err
 
 // Check if the fields we pulled from both EC2 and Terraform match. If there are
 // conflicts, something smells fishy and we shouldn't continue.
-func ValidateEC2andTFDevs(devFromTFState BlockDevice, devFromEC2 BlockDevice) {
-	// TODO - Implement this.
+func validateEC2andTFDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) bool {
+	// There are 2 fields we obtain from both the Terraform state file and
+	// the EC2 lookup:
+	// 1. device name
+	// 2. delete on termination
+	names_match := NewDeviceName(devFromTF.deviceName).ShortName() == NewDeviceName(devFromEC2.deviceName).ShortName()
+	deletes_match := devFromTF.deleteOnTermination == devFromEC2.deleteOnTermination
+	validated := names_match && deletes_match
+	return validated
 }
 
-func mergeEC2andTFStateDevs(devFromTFState BlockDevice, devFromEC2 BlockDevice) BlockDevice {
-	dev := devFromTFState
+// Sanity check of various fields on a block device.
+func validateBlockDev(dev BlockDevice) bool {
+	nameValid := dev.deviceName != ""
+	IDValid := dev.volumeID != ""
+	AZValid := dev.availabilityZone != ""
+	typeValid := dev.volumeType != ""
+	sizeValid := dev.size != 0
+	instanceValid := dev.instanceID != ""
+	return nameValid && IDValid && AZValid && typeValid && sizeValid && instanceValid
+}
+
+// Do the following:
+// 1. Check that the relevant fields match between EC2 and TF
+// 2. Merge the block devices into one
+// 3. Validate relevant fields on the resulting block device
+func mergeAndValidateBlockDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) (BlockDevice, error) {
+	fields_match := validateEC2andTFDevs(devFromTF, devFromEC2)
+	if !fields_match {
+		return BlockDevice{}, fmt.Errorf("EC2 and TF State discrepancy:\nFrom EC2:\n%+v\nFrom TF:\n%+v", devFromEC2, devFromTF)
+	}
+
+	dev := devFromTF
 	dev.volumeID = devFromEC2.volumeID
 	dev.instanceID = devFromEC2.instanceID
 	dev.availabilityZone = devFromEC2.availabilityZone
-	return dev
+
+	dev_ok := validateBlockDev(dev)
+	if !dev_ok {
+		return BlockDevice{}, fmt.Errorf("Invalid block device field detected:\n%+v", dev)
+	}
+
+	return dev, nil
 }
 
 // Do The Conversion on the Terraform state file given the extra resource ID
@@ -98,7 +131,7 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 			"ebs_block_device").([]interface{})
 
 		if !ok {
-			log.Fatalf("could not expand ebs_block_device for %v", name)
+			log.Fatalf("Could not expand ebs_block_device for %v", name)
 		}
 
 		// Delete the `ebs_block_device`s from the instance's state.
@@ -116,10 +149,17 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 		}
 
 		for devName, devFromTFState := range devMap {
-			// Merge in the volume ID.
-			devFromEC2Info := inst.BlockDevices[devName]
-			ValidateEC2andTFDevs(devFromTFState, devFromEC2Info)
-			dev := mergeEC2andTFStateDevs(devFromTFState, devFromEC2Info)
+			// Get the corresponding block device information from EC2.
+			devFromEC2Info, ok := inst.BlockDevices[devName]
+			if !ok {
+				log.Fatalf("Could not find corresponding block device in EC2 for %v", devName)
+			}
+
+			// Merge in the relevant fields, and check that everything looks reasonable.
+			dev, err := mergeAndValidateBlockDevs(devFromTFState, devFromEC2Info)
+			if err != nil {
+				log.Fatal(err)
+			}
 
 			volumeRes := dev.makeVolumeRes()
 			attachmentRes := dev.makeAttachmentRes()
