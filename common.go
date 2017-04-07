@@ -67,13 +67,26 @@ type BlockDevice struct {
 	instanceResName  *TerraformName
 }
 
-// TODO: Handle index.
 func (dev *BlockDevice) VolumeName() string {
-	return fmt.Sprintf("aws_ebs_volume.%s-%s", dev.instanceResName.name, dev.deviceName.ShortName())
+	indexPart := ""
+	if dev.instanceResName.index != -1 {
+		indexPart = fmt.Sprintf(".%v", dev.instanceResName.index)
+	}
+	return fmt.Sprintf("aws_ebs_volume.%s-%s%s",
+		dev.instanceResName.name,
+		dev.deviceName.ShortName(),
+		indexPart)
 }
 
 func (dev *BlockDevice) VolumeAttachmentName() string {
-	return fmt.Sprintf("aws_volume_attachment.%s-%s", dev.instanceResName.name, dev.deviceName.ShortName())
+	indexPart := ""
+	if dev.instanceResName.index != -1 {
+		indexPart = fmt.Sprintf(".%v", dev.instanceResName.index)
+	}
+	return fmt.Sprintf("aws_volume_attachment.%s-%s%s",
+		dev.instanceResName.name,
+		dev.deviceName.ShortName(),
+		indexPart)
 }
 
 // Get the ID Terraform synthesises for a volume attachment.
