@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	tf "github.com/hashicorp/terraform/terraform"
@@ -302,6 +303,40 @@ func TestBlockDeviceValidation(t *testing.T) {
 		actual := validateBlockDev(tt.in)
 		if !(actual == tt.out) {
 			t.Errorf("Expected validation %t, got %t", tt.out, actual)
+		}
+	}
+}
+
+func TestParseTerraformName(t *testing.T) {
+	var testCases = []struct{
+		in string
+		out *TerraformName
+	}{
+		{
+			"aws_instance.abc",
+			&TerraformName{
+				resourceType: "aws_instance",
+				name: "abc",
+				index: -1,
+			},
+		},
+		{
+			"aws_instance.abc.7",
+			&TerraformName{
+				resourceType: "aws_instance",
+				name: "abc",
+				index: 7,
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		actual, err := ParseTerraformName(tt.in)
+		if err != nil && tt.out != nil {
+			t.Errorf("Unexptected failure on %v: %v", tt.in, err)
+		}
+		if !reflect.DeepEqual(*actual, *tt.out) {
+			t.Errorf("Expected %+v, got %+v", tt.out, actual)
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"strconv"
 
 	// "github.com/davecgh/go-spew/spew"
@@ -31,6 +32,34 @@ func mapify(slice []interface{}) ([]map[string]string, bool) {
 		output = append(output, stringMap)
 	}
 	return output, true
+}
+
+type TerraformName struct {
+	resourceType, name string
+	// The index if any; -1 for none.
+	index int
+}
+
+// Parse a Terraform name like `aws_instance.my_name.3` into its consituent parts.
+func ParseTerraformName(name string) (*TerraformName, error) {
+	var out TerraformName
+	parts := strings.Split(name, ".")
+	if len(parts) != 2 && len(parts) != 3 {
+		return nil, fmt.Errorf("Invalid resource name: %v", name)
+	}
+	out.resourceType = parts[0]
+	out.name = parts[1]
+	out.index = -1
+
+	if len(parts) == 3 {
+		index, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return nil, fmt.Errorf("Invalid resource name %v: %v", name, err)
+		}
+		out.index = index
+	}
+
+	return &out, nil
 }
 
 func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, error) {

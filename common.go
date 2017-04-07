@@ -64,6 +64,7 @@ type BlockDevice struct {
 	// Relevant instance information
 	instanceID       string
 	availabilityZone string
+	instanceResName  *TerraformName
 }
 
 // Get the ID Terraform synthesises for a volume attachment.
