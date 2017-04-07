@@ -105,10 +105,9 @@ func validateBlockDev(dev BlockDevice) bool {
 	nameValid := dev.deviceName != ""
 	IDValid := dev.volumeID != ""
 	AZValid := dev.availabilityZone != ""
-	typeValid := dev.volumeType != ""
 	sizeValid := dev.size != 0
 	instanceValid := dev.instanceID != ""
-	return nameValid && IDValid && AZValid && typeValid && sizeValid && instanceValid
+	return nameValid && IDValid && AZValid && sizeValid && instanceValid
 }
 
 // Do the following:
