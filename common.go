@@ -84,7 +84,6 @@ func (dev *BlockDevice) volumeAttachmentID() string {
 
 // Make a Terraform `aws_ebs_volume` resource from the attributes from an
 // `ebs_block_device` block.
-// TODO: Some attributes need to be translated; see comment at top of attrs.go.
 func (dev *BlockDevice) makeVolumeRes() *tf.ResourceState {
 	var attrs = make(map[string]string)
 	attrs["size"] = strconv.Itoa(dev.size)
@@ -94,7 +93,6 @@ func (dev *BlockDevice) makeVolumeRes() *tf.ResourceState {
 	attrs["availability_zone"] = dev.availabilityZone
 	attrs["snapshot_id"] = dev.snapshotId
 
-	// TODO verify attrs
 	newRes := &tf.ResourceState{
 		Type: "aws_ebs_volume",
 		Primary: &tf.InstanceState{
@@ -111,7 +109,6 @@ func (dev *BlockDevice) makeAttachmentRes() *tf.ResourceState {
 	attrs := make(map[string]string)
 	attachmentName := dev.volumeAttachmentID()
 
-	// TODO verify attrs
 	attrs["device_name"] = dev.deviceName
 	attrs["instance_id"] = dev.instanceID
 	attrs["volume_id"] = dev.volumeID
@@ -120,7 +117,6 @@ func (dev *BlockDevice) makeAttachmentRes() *tf.ResourceState {
 	newRes := &tf.ResourceState{
 		Type: "aws_volume_attachment",
 		Primary: &tf.InstanceState{
-			// TODO: Generate this correctly.
 			ID:         attachmentName,
 			Attributes: attrs,
 		},
