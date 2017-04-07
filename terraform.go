@@ -62,7 +62,7 @@ func ParseTerraformName(name string) (*TerraformName, error) {
 	return &out, nil
 }
 
-func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, error) {
+func createDeviceMap(instanceRes *TerraformName, slice []map[string]string) (map[DeviceName]BlockDevice, error) {
 	output := make(map[DeviceName]BlockDevice)
 	for _, dev := range slice {
 		size, err := strconv.Atoi(dev["volume_size"])
@@ -82,6 +82,7 @@ func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, err
 			encrypted:           dev["encrypted"],
 			iops:                iops,
 			snapshotId:          dev["snapshot_id"],
+			instanceResName:     instanceRes,
 		}
 	}
 	return output, nil
@@ -171,7 +172,11 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 			log.Fatalf("Could not mapify")
 		}
 
-		devMap, err := createDeviceMap(devices)
+		instanceResName, err := ParseTerraformName(name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		devMap, err := createDeviceMap(instanceResName, devices)
 		if err != nil {
 			log.Fatalf("Could not create device map: %v", err)
 		}
@@ -192,8 +197,9 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 			volumeRes := dev.makeVolumeRes()
 			attachmentRes := dev.makeAttachmentRes()
 
-			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, devName.ShortName())] = volumeRes
-			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, devName.ShortName())] = attachmentRes
+			// TODO: Handle index.
+			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", dev.instanceResName.name, devName.ShortName())] = volumeRes
+			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", dev.instanceResName.name, devName.ShortName())] = attachmentRes
 		}
 	}
 
