@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
 
+	tfhash "github.com/hashicorp/terraform/helper/hashcode"
 	tf "github.com/hashicorp/terraform/terraform"
 )
 
@@ -64,6 +66,22 @@ type BlockDevice struct {
 	availabilityZone string
 }
 
+// Get the ID Terraform synthesises for a volume attachment.
+//
+// From
+//    https://github.com/hashicorp/terraform/blob/ef94acbf1f753dd1d03d3249cd58f4876cd19682/builtin/providers/aws/resource_aws_volume_attachment.go#L244-L251
+// with hat-tip to:
+//  - https://github.com/hashicorp/terraform/issues/8458#issuecomment-258831650
+//  - https://github.com/foxsy/tfvolattid
+func (dev *BlockDevice) volumeAttachmentID() string {
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("%s-", dev.deviceName))
+	buf.WriteString(fmt.Sprintf("%s-", dev.instanceID))
+	buf.WriteString(fmt.Sprintf("%s-", dev.volumeID))
+
+	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
+}
+
 // Make a Terraform `aws_ebs_volume` resource from the attributes from an
 // `ebs_block_device` block.
 // TODO: Some attributes need to be translated; see comment at top of attrs.go.
@@ -91,7 +109,7 @@ func (dev *BlockDevice) makeVolumeRes() *tf.ResourceState {
 // `ebs_block_device` block, which incldues the relevant instance information.
 func (dev *BlockDevice) makeAttachmentRes() *tf.ResourceState {
 	attrs := make(map[string]string)
-	attachmentName := volumeAttachmentID(*dev)
+	attachmentName := dev.volumeAttachmentID()
 
 	// TODO verify attrs
 	attrs["device_name"] = dev.deviceName

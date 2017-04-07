@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,26 +9,9 @@ import (
 
 	// "github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform/flatmap"
-	tfhash "github.com/hashicorp/terraform/helper/hashcode"
 	tfstate "github.com/hashicorp/terraform/state"
 	tf "github.com/hashicorp/terraform/terraform"
 )
-
-// Get the ID Terraform synthesises for a volume attachment.
-//
-// From
-//    https://github.com/hashicorp/terraform/blob/ef94acbf1f753dd1d03d3249cd58f4876cd19682/builtin/providers/aws/resource_aws_volume_attachment.go#L244-L251
-// with hat-tip to:
-//  - https://github.com/hashicorp/terraform/issues/8458#issuecomment-258831650
-//  - https://github.com/foxsy/tfvolattid
-func volumeAttachmentID(dev BlockDevice) string {
-	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("%s-", dev.deviceName))
-	buf.WriteString(fmt.Sprintf("%s-", dev.instanceID))
-	buf.WriteString(fmt.Sprintf("%s-", dev.volumeID))
-
-	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
-}
 
 // Type conversion for some []interface{} we know is actually a
 // []map[string]interface{}, and convert all the values to strings.

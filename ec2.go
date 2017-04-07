@@ -1,12 +1,12 @@
 package main
 
 import (
-  "strconv"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	ec2 "github.com/aws/aws-sdk-go/service/ec2"
-  // "github.com/davecgh/go-spew/spew"
+	// "github.com/davecgh/go-spew/spew"
 )
 
 type volAtt struct {
@@ -50,12 +50,12 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 			devMap := make(map[DeviceName]BlockDevice)
 			for _, blkDev := range instance.BlockDeviceMappings {
 				devMap[NewDeviceName(*blkDev.DeviceName)] = BlockDevice{
-					volumeID: *blkDev.Ebs.VolumeId,
-          deviceName: *blkDev.DeviceName,
-          deleteOnTermination: strconv.FormatBool(*blkDev.Ebs.DeleteOnTermination),
+					volumeID:            *blkDev.Ebs.VolumeId,
+					deviceName:          *blkDev.DeviceName,
+					deleteOnTermination: strconv.FormatBool(*blkDev.Ebs.DeleteOnTermination),
 
-          instanceID: id,
-          availabilityZone: *instance.Placement.AvailabilityZone,
+					instanceID:       id,
+					availabilityZone: *instance.Placement.AvailabilityZone,
 				}
 			}
 			instMap[id] = Instance{ID: id, BlockDevices: devMap}
