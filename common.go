@@ -56,7 +56,7 @@ type BlockDevice struct {
 	size                int
 	volumeType          string
 	deleteOnTermination string
-	deviceName          string
+	deviceName          DeviceName
 	encrypted           string
 	iops                int
 	snapshotId          string
@@ -65,6 +65,15 @@ type BlockDevice struct {
 	instanceID       string
 	availabilityZone string
 	instanceResName  *TerraformName
+}
+
+// TODO: Handle index.
+func (dev *BlockDevice) VolumeName() string {
+	return fmt.Sprintf("aws_ebs_volume.%s-%s", dev.instanceResName.name, dev.deviceName.ShortName())
+}
+
+func (dev *BlockDevice) VolumeAttachmentName() string {
+	return fmt.Sprintf("aws_volume_attachment.%s-%s", dev.instanceResName.name, dev.deviceName.ShortName())
 }
 
 // Get the ID Terraform synthesises for a volume attachment.
@@ -76,7 +85,7 @@ type BlockDevice struct {
 //  - https://github.com/foxsy/tfvolattid
 func (dev *BlockDevice) volumeAttachmentID() string {
 	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("%s-", dev.deviceName))
+	buf.WriteString(fmt.Sprintf("%s-", dev.deviceName.LongName()))
 	buf.WriteString(fmt.Sprintf("%s-", dev.instanceID))
 	buf.WriteString(fmt.Sprintf("%s-", dev.volumeID))
 
@@ -110,7 +119,7 @@ func (dev *BlockDevice) makeAttachmentRes() *tf.ResourceState {
 	attrs := make(map[string]string)
 	attachmentName := dev.volumeAttachmentID()
 
-	attrs["device_name"] = dev.deviceName
+	attrs["device_name"] = dev.deviceName.LongName()
 	attrs["instance_id"] = dev.instanceID
 	attrs["volume_id"] = dev.volumeID
 	attrs["id"] = attachmentName

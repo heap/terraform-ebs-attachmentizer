@@ -19,7 +19,7 @@ func TestMakeVolumeRes(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
@@ -64,7 +64,7 @@ func TestMakeAttachmentRes(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
@@ -74,12 +74,12 @@ func TestMakeAttachmentRes(t *testing.T) {
 			tf.ResourceState{
 				Type: "aws_volume_attachment",
 				Primary: &tf.InstanceState{
-					ID: "vai-2938977260",
+					ID: "vai-3194341925",
 					Attributes: map[string]string{
-						"device_name": "xvdb",
+						"device_name": "/dev/xvdb",
 						"instance_id": "i-1d7683bd",
 						"volume_id":   "v-abcd",
-						"id":          "vai-2938977260",
+						"id":          "vai-3194341925",
 					},
 				},
 			},
@@ -107,14 +107,14 @@ func TestBlockDeviceCrossValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
 			},
 			BlockDevice{
 				volumeID:            "v-abcd",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				deleteOnTermination: "false",
 				instanceID:          "i-1d7683bd",
 				availabilityZone:    "us-east-1",
@@ -126,14 +126,14 @@ func TestBlockDeviceCrossValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
 			},
 			BlockDevice{
 				volumeID:            "v-abcd",
-				deviceName:          "/dev/xvdb",
+				deviceName:          NewDeviceName("/dev/xvdb"),
 				deleteOnTermination: "false",
 				instanceID:          "i-1d7683bd",
 				availabilityZone:    "us-east-1",
@@ -145,14 +145,14 @@ func TestBlockDeviceCrossValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
 			},
 			BlockDevice{
 				volumeID:            "v-abcd",
-				deviceName:          "/dev/xvdb1",
+				deviceName:          NewDeviceName("/dev/xvdb1"),
 				deleteOnTermination: "false",
 				instanceID:          "i-1d7683bd",
 				availabilityZone:    "us-east-1",
@@ -164,14 +164,14 @@ func TestBlockDeviceCrossValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
 			},
 			BlockDevice{
 				volumeID:            "v-abcd",
-				deviceName:          "/dev/xvdb",
+				deviceName:          NewDeviceName("/dev/xvdb"),
 				deleteOnTermination: "true",
 				instanceID:          "i-1d7683bd",
 				availabilityZone:    "us-east-1",
@@ -198,7 +198,7 @@ func TestBlockDeviceValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
@@ -213,7 +213,7 @@ func TestBlockDeviceValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "",
+				deviceName:          NewDeviceName(""),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
@@ -228,7 +228,7 @@ func TestBlockDeviceValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
@@ -243,7 +243,7 @@ func TestBlockDeviceValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
@@ -258,14 +258,14 @@ func TestBlockDeviceValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
 				instanceID:          "i-1d7683bd",
 				availabilityZone:    "us-east-1",
 			},
-			false,
+			true,
 		},
 		{
 			BlockDevice{
@@ -273,7 +273,7 @@ func TestBlockDeviceValidation(t *testing.T) {
 				size:                0,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
@@ -288,7 +288,7 @@ func TestBlockDeviceValidation(t *testing.T) {
 				size:                10,
 				volumeType:          "gp2",
 				deleteOnTermination: "false",
-				deviceName:          "xvdb",
+				deviceName:          NewDeviceName("xvdb"),
 				encrypted:           "false",
 				iops:                1500,
 				snapshotId:          "",
@@ -299,33 +299,33 @@ func TestBlockDeviceValidation(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
+	for i, tt := range testCases {
 		actual := validateBlockDev(tt.in)
 		if !(actual == tt.out) {
-			t.Errorf("Expected validation %t, got %t", tt.out, actual)
+			t.Errorf("[%d] Expected validation %t, got %t", i, tt.out, actual)
 		}
 	}
 }
 
 func TestParseTerraformName(t *testing.T) {
-	var testCases = []struct{
-		in string
+	var testCases = []struct {
+		in  string
 		out *TerraformName
 	}{
 		{
 			"aws_instance.abc",
 			&TerraformName{
 				resourceType: "aws_instance",
-				name: "abc",
-				index: -1,
+				name:         "abc",
+				index:        -1,
 			},
 		},
 		{
 			"aws_instance.abc.7",
 			&TerraformName{
 				resourceType: "aws_instance",
-				name: "abc",
-				index: 7,
+				name:         "abc",
+				index:        7,
 			},
 		},
 	}
