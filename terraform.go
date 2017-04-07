@@ -1,75 +1,17 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
 
-	"github.com/hashicorp/terraform/flatmap"
-	tf "github.com/hashicorp/terraform/terraform"
-	tfhash "github.com/hashicorp/terraform/helper/hashcode"
-	tfstate "github.com/hashicorp/terraform/state"
 	// "github.com/davecgh/go-spew/spew"
+	"github.com/hashicorp/terraform/flatmap"
+	tfstate "github.com/hashicorp/terraform/state"
+	tf "github.com/hashicorp/terraform/terraform"
 )
-
-// Get the ID Terraform synthesises for a volume attachment.
-//
-// From
-//    https://github.com/hashicorp/terraform/blob/ef94acbf1f753dd1d03d3249cd58f4876cd19682/builtin/providers/aws/resource_aws_volume_attachment.go#L244-L251
-// with hat-tip to:
-//  - https://github.com/hashicorp/terraform/issues/8458#issuecomment-258831650
-//  - https://github.com/foxsy/tfvolattid
-func volumeAttachmentID(name, volumeID, instanceID string) string {
-	var buf bytes.Buffer
-	buf.WriteString(fmt.Sprintf("%s-", name))
-	buf.WriteString(fmt.Sprintf("%s-", instanceID))
-	buf.WriteString(fmt.Sprintf("%s-", volumeID))
-
-	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
-}
-
-// Make a Terraform `aws_ebs_volume` resource from the attributes from an
-// `ebs_block_device` block.
-// TODO: Availability zone needs to be added; some attributes need to be
-// translated; see comment at top of attrs.go.
-func makeVolumeRes(dev BlockDevice) *tf.ResourceState {
-	var attrs = make(map[string]string)
-	attrs["size"] = strconv.Itoa(dev.Size)
-	attrs["type"] = dev.Type
-	// TODO verify attrs
-	newRes := &tf.ResourceState{
-		Type: "aws_ebs_volume",
-		Primary: &tf.InstanceState{
-			ID: *dev.ID,
-			Attributes: attrs,
-		},
-	}
-	return newRes
-}
-
-// Make a Terraform `aws_volume_attachment` resource from the attributes from an
-// `ebs_block_device` block and the instance and volume IDs.
-func makeAttachmentRes(instanceName, instanceID string, devName DeviceName, dev BlockDevice) *tf.ResourceState {
-	attrs := make(map[string]string)
-
-	// TODO verify attrs
-	attrs["device_name"] = devName.LongName()
-	attrs["instance_id"] = instanceID
-	attrs["volume_id"] = *dev.ID
-
-	newRes := &tf.ResourceState{
-		Type: "aws_volume_attachment",
-		Primary: &tf.InstanceState{
-			// TODO: Generate this correctly.
-			ID: volumeAttachmentID(instanceName, *dev.ID, instanceID),
-			Attributes: attrs,
-		},
-	}
-	return newRes
-}
 
 // Type conversion for some []interface{} we know is actually a
 // []map[string]interface{}, and convert all the values to strings.
@@ -93,22 +35,79 @@ func mapify(slice []interface{}) ([]map[string]string, bool) {
 
 func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, error) {
 	output := make(map[DeviceName]BlockDevice)
-	for _, dev:= range slice {
+	for _, dev := range slice {
 		size, err := strconv.Atoi(dev["volume_size"])
 		if err != nil {
 			return nil, err
 		}
-		output[NewDeviceName(dev["device_name"])] = BlockDevice{
-		    Type: dev["device_type"],
-			Size: size,
+		iops, err := strconv.Atoi(dev["iops"])
+		if err != nil {
+			return nil, err
+		}
+		deviceName := NewDeviceName(dev["device_name"])
+		output[deviceName] = BlockDevice{
+			size:                size,
+			volumeType:          dev["device_type"],
+			deleteOnTermination: dev["delete_on_termination"],
+			deviceName:          deviceName.LongName(),
+			encrypted:           dev["encrypted"],
+			iops:                iops,
+			snapshotId:          dev["snapshot_id"],
 		}
 	}
 	return output, nil
 }
 
+// Check if the fields we pulled from both EC2 and Terraform match. If there are
+// conflicts, something smells fishy and we shouldn't continue.
+func validateEC2andTFDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) bool {
+	// There are 2 fields we obtain from both the Terraform state file and
+	// the EC2 lookup:
+	// 1. device name
+	// 2. delete on termination
+	names_match := NewDeviceName(devFromTF.deviceName).ShortName() == NewDeviceName(devFromEC2.deviceName).ShortName()
+	deletes_match := devFromTF.deleteOnTermination == devFromEC2.deleteOnTermination
+	validated := names_match && deletes_match
+	return validated
+}
+
+// Sanity check of various fields on a block device.
+func validateBlockDev(dev BlockDevice) bool {
+	nameValid := dev.deviceName != ""
+	IDValid := dev.volumeID != ""
+	AZValid := dev.availabilityZone != ""
+	typeValid := dev.volumeType != ""
+	sizeValid := dev.size != 0
+	instanceValid := dev.instanceID != ""
+	return nameValid && IDValid && AZValid && typeValid && sizeValid && instanceValid
+}
+
+// Do the following:
+// 1. Check that the relevant fields match between EC2 and TF
+// 2. Merge the block devices into one
+// 3. Validate relevant fields on the resulting block device
+func mergeAndValidateBlockDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) (BlockDevice, error) {
+	fields_match := validateEC2andTFDevs(devFromTF, devFromEC2)
+	if !fields_match {
+		return BlockDevice{}, fmt.Errorf("EC2 and TF State discrepancy:\nFrom EC2:\n%+v\nFrom TF:\n%+v", devFromEC2, devFromTF)
+	}
+
+	dev := devFromTF
+	dev.volumeID = devFromEC2.volumeID
+	dev.instanceID = devFromEC2.instanceID
+	dev.availabilityZone = devFromEC2.availabilityZone
+
+	dev_ok := validateBlockDev(dev)
+	if !dev_ok {
+		return BlockDevice{}, fmt.Errorf("Invalid block device field detected:\n%+v", dev)
+	}
+
+	return dev, nil
+}
+
 // Do The Conversion on the Terraform state file given the extra resource ID
 // information from EC2.
-func TFStateStuff(stateFilePath string, instMap map[string]Instance) {
+func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 	localState := tfstate.LocalState{Path: stateFilePath, PathOut: "/tmp/out.tfstate"}
 	localState.RefreshState()
 	root := localState.State().Modules[0]
@@ -126,14 +125,13 @@ func TFStateStuff(stateFilePath string, instMap map[string]Instance) {
 			// query returned.
 			continue
 		}
-		instanceName := name
 
 		interfaceDevices, ok := flatmap.Expand(
 			res.Primary.Attributes,
 			"ebs_block_device").([]interface{})
 
 		if !ok {
-			log.Fatalf("could not expand ebs_block_device for %v", name)
+			log.Fatalf("Could not expand ebs_block_device for %v", name)
 		}
 
 		// Delete the `ebs_block_device`s from the instance's state.
@@ -150,11 +148,22 @@ func TFStateStuff(stateFilePath string, instMap map[string]Instance) {
 			log.Fatalf("Could not create device map: %v", err)
 		}
 
-		for devName, dev := range devMap {
-			// Merge in the volume ID.
-			dev.ID = inst.BlockDevices[devName].ID
-			volumeRes := makeVolumeRes(dev)
-			attachmentRes := makeAttachmentRes(instanceName, inst.ID, devName, dev)
+		for devName, devFromTFState := range devMap {
+			// Get the corresponding block device information from EC2.
+			devFromEC2Info, ok := inst.BlockDevices[devName]
+			if !ok {
+				log.Fatalf("Could not find corresponding block device in EC2 for %v", devName)
+			}
+
+			// Merge in the relevant fields, and check that everything looks reasonable.
+			dev, err := mergeAndValidateBlockDevs(devFromTFState, devFromEC2Info)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			volumeRes := dev.makeVolumeRes()
+			attachmentRes := dev.makeAttachmentRes()
+
 			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, devName.ShortName())] = volumeRes
 			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, devName.ShortName())] = attachmentRes
 		}

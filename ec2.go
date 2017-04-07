@@ -1,9 +1,12 @@
 package main
 
 import (
+	"strconv"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	ec2 "github.com/aws/aws-sdk-go/service/ec2"
+	// "github.com/davecgh/go-spew/spew"
 )
 
 type volAtt struct {
@@ -35,7 +38,7 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 			nameFilter(instanceNamePattern),
 		},
 	}
-	resp, err:= c.svc.DescribeInstances(params)
+	resp, err := c.svc.DescribeInstances(params)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +50,12 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 			devMap := make(map[DeviceName]BlockDevice)
 			for _, blkDev := range instance.BlockDeviceMappings {
 				devMap[NewDeviceName(*blkDev.DeviceName)] = BlockDevice{
-					ID: blkDev.Ebs.VolumeId,
+					volumeID:            *blkDev.Ebs.VolumeId,
+					deviceName:          *blkDev.DeviceName,
+					deleteOnTermination: strconv.FormatBool(*blkDev.Ebs.DeleteOnTermination),
+
+					instanceID:       id,
+					availabilityZone: *instance.Placement.AvailabilityZone,
 				}
 			}
 			instMap[id] = Instance{ID: id, BlockDevices: devMap}
@@ -58,7 +66,7 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 
 // Connect to EC2 and create the `InstanceDeviceMap` for instances matching the
 // pattern.
-func EC2Stuff(instanceNamePattern string) (map[string]Instance, error)  {
+func GetEC2AWSState(instanceNamePattern string) (map[string]Instance, error) {
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, err
