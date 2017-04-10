@@ -19,6 +19,21 @@ func normalizeDeviceName(dev string) string {
 	}
 }
 
+func generateResourceConfig(resourceType string, resourceName string, attrMap map[string]string) string {
+	var configBuf bytes.Buffer
+	configBuf.WriteString(fmt.Sprintf("resource \"%v\" \"%v\" {", resourceType, resourceName))
+
+	for attribute, value := range attrMap {
+		// The attribute map will contain the id, but it doesn't belong in the config.
+		if attribute != "id" {
+			configBuf.WriteString(fmt.Sprintf("\n\t%s = \"%s\"", attribute, value))
+		}
+	}
+
+	configBuf.WriteString("\n}")
+	return configBuf.String()
+}
+
 // A wrapper around a device name that allows getting it with and without the
 // `/dev/` prefix.
 type DeviceName struct {
@@ -67,26 +82,26 @@ type BlockDevice struct {
 	instanceResName  *TerraformName
 }
 
-func (dev *BlockDevice) VolumeName() string {
+func (dev *BlockDevice) UniqueName() string {
 	indexPart := ""
 	if dev.instanceResName.index != -1 {
 		indexPart = fmt.Sprintf(".%v", dev.instanceResName.index)
 	}
-	return fmt.Sprintf("aws_ebs_volume.%s-%s%s",
+
+	return fmt.Sprintf("%s-%s%s",
 		dev.instanceResName.name,
 		dev.deviceName.ShortName(),
 		indexPart)
 }
 
+func (dev *BlockDevice) VolumeName() string {
+	resourceName := dev.UniqueName()
+	return fmt.Sprintf("aws_ebs_volume.%s", resourceName)
+}
+
 func (dev *BlockDevice) VolumeAttachmentName() string {
-	indexPart := ""
-	if dev.instanceResName.index != -1 {
-		indexPart = fmt.Sprintf(".%v", dev.instanceResName.index)
-	}
-	return fmt.Sprintf("aws_volume_attachment.%s-%s%s",
-		dev.instanceResName.name,
-		dev.deviceName.ShortName(),
-		indexPart)
+	resourceName := dev.UniqueName()
+	return fmt.Sprintf("aws_volume_attachment.%s", resourceName)
 }
 
 // Get the ID Terraform synthesises for a volume attachment.
@@ -105,16 +120,25 @@ func (dev *BlockDevice) volumeAttachmentID() string {
 	return fmt.Sprintf("vai-%d", tfhash.String(buf.String()))
 }
 
-// Make a Terraform `aws_ebs_volume` resource from the attributes from an
-// `ebs_block_device` block.
-func (dev *BlockDevice) makeVolumeRes() *tf.ResourceState {
+// Make a map of relevant volume attributes from an `ebs_block_device` block.
+// used in `dev.makeVolumeRes` and `dev.makeVolumeConfig`
+func (dev *BlockDevice) makeVolumeAttrs() map[string]string {
 	var attrs = make(map[string]string)
+
 	attrs["size"] = strconv.Itoa(dev.size)
 	attrs["type"] = dev.volumeType
 	attrs["id"] = dev.volumeID
 	attrs["encrypted"] = dev.encrypted
 	attrs["availability_zone"] = dev.availabilityZone
 	attrs["snapshot_id"] = dev.snapshotId
+
+	return attrs
+}
+
+// Make a Terraform `aws_ebs_volume` resource from the attributes from an
+// `ebs_block_device` block.
+func (dev *BlockDevice) makeVolumeRes() *tf.ResourceState {
+	attrs := dev.makeVolumeAttrs()
 
 	newRes := &tf.ResourceState{
 		Type: "aws_ebs_volume",
@@ -126,23 +150,46 @@ func (dev *BlockDevice) makeVolumeRes() *tf.ResourceState {
 	return newRes
 }
 
-// Make a Terraform `aws_volume_attachment` resource from the attributes from an
-// `ebs_block_device` block, which incldues the relevant instance information.
-func (dev *BlockDevice) makeAttachmentRes() *tf.ResourceState {
+// Make a map of relevant attachment attributes from an `ebs_block_device` block.
+// used in `dev.makeAttachmentRes` and `dev.makeAttachmentConfig`
+func (dev *BlockDevice) makeAttachmentAttrs() map[string]string {
 	attrs := make(map[string]string)
-	attachmentName := dev.volumeAttachmentID()
 
 	attrs["device_name"] = dev.deviceName.LongName()
 	attrs["instance_id"] = dev.instanceID
 	attrs["volume_id"] = dev.volumeID
-	attrs["id"] = attachmentName
+	attrs["id"] = dev.volumeAttachmentID()
+
+	return attrs
+}
+
+// Make a Terraform `aws_volume_attachment` resource from the attributes from an
+// `ebs_block_device` block, which incldues the relevant instance information.
+func (dev *BlockDevice) makeAttachmentRes() *tf.ResourceState {
+	attrs := dev.makeAttachmentAttrs()
 
 	newRes := &tf.ResourceState{
 		Type: "aws_volume_attachment",
 		Primary: &tf.InstanceState{
-			ID:         attachmentName,
+			ID:         dev.volumeAttachmentID(),
 			Attributes: attrs,
 		},
 	}
 	return newRes
+}
+
+// Generate a configuration for the `aws_ebs_volume` resource from a specific
+// block device.
+func (dev *BlockDevice) makeVolumeConfig() string {
+	attrs := dev.makeVolumeAttrs()
+	return generateResourceConfig("aws_ebs_volume", dev.UniqueName(), attrs)
+}
+
+// Generate a configuration for the `aws_volume_attachment` resource from a specific
+// block device.
+// :TODO: Make this print `instance_id` and `volume_id` via resource reference rather
+//        than the raw ids.
+func (dev *BlockDevice) makeAttachmentConfig() string {
+	attrs := dev.makeAttachmentAttrs()
+	return generateResourceConfig("aws_volume_attachment", dev.UniqueName(), attrs)
 }
