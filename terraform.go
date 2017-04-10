@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	// "github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/terraform/flatmap"
@@ -33,7 +34,35 @@ func mapify(slice []interface{}) ([]map[string]string, bool) {
 	return output, true
 }
 
-func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, error) {
+type TerraformName struct {
+	resourceType, name string
+	// The index if any; -1 for none.
+	index int
+}
+
+// Parse a Terraform name like `aws_instance.my_name.3` into its consituent parts.
+func ParseTerraformName(name string) (*TerraformName, error) {
+	var out TerraformName
+	parts := strings.Split(name, ".")
+	if len(parts) != 2 && len(parts) != 3 {
+		return nil, fmt.Errorf("Invalid resource name: %v", name)
+	}
+	out.resourceType = parts[0]
+	out.name = parts[1]
+	out.index = -1
+
+	if len(parts) == 3 {
+		index, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return nil, fmt.Errorf("Invalid resource name %v: %v", name, err)
+		}
+		out.index = index
+	}
+
+	return &out, nil
+}
+
+func createDeviceMap(instanceRes *TerraformName, slice []map[string]string) (map[DeviceName]BlockDevice, error) {
 	output := make(map[DeviceName]BlockDevice)
 	for _, dev := range slice {
 		size, err := strconv.Atoi(dev["volume_size"])
@@ -49,10 +78,11 @@ func createDeviceMap(slice []map[string]string) (map[DeviceName]BlockDevice, err
 			size:                size,
 			volumeType:          dev["device_type"],
 			deleteOnTermination: dev["delete_on_termination"],
-			deviceName:          deviceName.LongName(),
+			deviceName:          deviceName,
 			encrypted:           dev["encrypted"],
 			iops:                iops,
 			snapshotId:          dev["snapshot_id"],
+			instanceResName:     instanceRes,
 		}
 	}
 	return output, nil
@@ -65,7 +95,7 @@ func validateEC2andTFDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) bool {
 	// the EC2 lookup:
 	// 1. device name
 	// 2. delete on termination
-	names_match := NewDeviceName(devFromTF.deviceName).ShortName() == NewDeviceName(devFromEC2.deviceName).ShortName()
+	names_match := devFromTF.deviceName.ShortName() == devFromEC2.deviceName.ShortName()
 	deletes_match := devFromTF.deleteOnTermination == devFromEC2.deleteOnTermination
 	validated := names_match && deletes_match
 	return validated
@@ -73,13 +103,13 @@ func validateEC2andTFDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) bool {
 
 // Sanity check of various fields on a block device.
 func validateBlockDev(dev BlockDevice) bool {
-	nameValid := dev.deviceName != ""
+	// Short name because otherwise we get "/dev/".
+	nameValid := dev.deviceName.ShortName() != ""
 	IDValid := dev.volumeID != ""
 	AZValid := dev.availabilityZone != ""
-	typeValid := dev.volumeType != ""
 	sizeValid := dev.size != 0
 	instanceValid := dev.instanceID != ""
-	return nameValid && IDValid && AZValid && typeValid && sizeValid && instanceValid
+	return nameValid && IDValid && AZValid && sizeValid && instanceValid
 }
 
 // Do the following:
@@ -143,7 +173,11 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 			log.Fatalf("Could not mapify")
 		}
 
-		devMap, err := createDeviceMap(devices)
+		instanceResName, err := ParseTerraformName(name)
+		if err != nil {
+			log.Fatal(err)
+		}
+		devMap, err := createDeviceMap(instanceResName, devices)
 		if err != nil {
 			log.Fatalf("Could not create device map: %v", err)
 		}
@@ -164,8 +198,8 @@ func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
 			volumeRes := dev.makeVolumeRes()
 			attachmentRes := dev.makeAttachmentRes()
 
-			newResources[fmt.Sprintf("aws_ebs_volume.%s-%s", name, devName.ShortName())] = volumeRes
-			newResources[fmt.Sprintf("aws_volume_attachment.%s-%s", name, devName.ShortName())] = attachmentRes
+			newResources[dev.VolumeName()] = volumeRes
+			newResources[dev.VolumeAttachmentName()] = attachmentRes
 		}
 	}
 
