@@ -8,11 +8,12 @@ and `aws_volume_attachment` resources.
 
 ## Usage
 
-    blkdev2volatt INSTANCE STATEFILE
+    blkdev2volatt INSTANCE REGION STATEFILE
 
 - `INSTANCE` is the value of the `Name` tag in EC2 for the instance to act
   on. It may be a pattern like `something-*`, in which case all matching
   instances will be modified.
+- `REGION` is the AWS availability zone your infrastructure exists in, e.g., `us-east-1`.
 - `STATEFILE` is the path of a `terraform.tfstate` file.
 
 ## Why

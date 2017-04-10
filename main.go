@@ -7,9 +7,9 @@ import (
 )
 
 func main() {
-	instDevMap, err := GetEC2AWSState(os.Args[1])
+	instDevMap, err := GetEC2AWSState(os.Args[1], os.Args[2])
 	if err != nil {
 		log.Fatalf("ec2 failed: %v", err)
 	}
-	ConvertTFState(os.Args[2], instDevMap)
+	ConvertTFState(os.Args[3], instDevMap)
 }
