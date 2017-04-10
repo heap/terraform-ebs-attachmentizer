@@ -66,13 +66,13 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 
 // Connect to EC2 and create the `InstanceDeviceMap` for instances matching the
 // pattern.
-func GetEC2AWSState(instanceNamePattern string) (map[string]Instance, error) {
+func GetEC2AWSState(instanceNamePattern string, availabilityZone string) (map[string]Instance, error) {
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, err
 	}
 
-	ec2 := EC2{svc: ec2.New(sess, &aws.Config{Region: aws.String("us-east-1")})}
+	ec2 := EC2{svc: ec2.New(sess, &aws.Config{Region: aws.String(availabilityZone)})}
 
 	return ec2.GetInstances(instanceNamePattern)
 }
