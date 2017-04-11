@@ -139,10 +139,9 @@ func mergeAndValidateBlockDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) (B
 // Do The Conversion on the Terraform state file given the extra resource ID
 // information from EC2. Returns the new terraform state, and a suggested configuration
 // string for use in the `.tf` source file.
-func generateNewTFState(stateFilePath string, instMap map[string]Instance) (*tf.ModuleState, string) {
-	localState := tfstate.LocalState{Path: stateFilePath, PathOut: "/tmp/out.tfstate"}
-	localState.RefreshState()
-	root := localState.State().Modules[0]
+func generateNewTFState(stateToModify *tf.State, instMap map[string]Instance) (*tf.State, string) {
+  outState := stateToModify.DeepCopy()
+  root := outState.Modules[0]
 	var configBuf bytes.Buffer
 
 	newResources := make(map[string]*tf.ResourceState)
@@ -213,15 +212,19 @@ func generateNewTFState(stateFilePath string, instMap map[string]Instance) (*tf.
 		root.Resources[k] = v
 	}
 
-	return root, configBuf.String()
+	return outState, configBuf.String()
 }
 
-// :TODO: Make this write to state file rather than just printing.
 // :TODO: Add the option to print a diff.
-func outputState(newState *tf.ModuleState) {
-	json, _ := json.MarshalIndent(newState.Resources, "", "  ")
+func outputState(localState *tfstate.LocalState, newState *tf.State, toFile bool) {
+	json, _ := json.MarshalIndent(newState.Modules[0].Resources, "", "  ")
 	fmt.Print("\n________New Terraform state (JSON)________\n\n")
 	os.Stdout.Write(json)
+
+  if toFile {
+    // WriteState updates the state `serial`, so we don't have to worry about it.
+    localState.WriteState(newState)
+  }
 }
 
 // :TODO: Provide option to write this to a user-specified file, rather than just printing.
@@ -233,8 +236,12 @@ func outputConfig(config string) {
 // Do The Conversion on the Terraform state file given the extra resource ID
 // information from EC2.
 func ConvertTFState(stateFilePath string, instMap map[string]Instance) {
-	newState, newConfig := generateNewTFState(stateFilePath, instMap)
+  localState := tfstate.LocalState{Path: stateFilePath, PathOut: "/tmp/out.tfstate"}
+	localState.RefreshState()
+	stateToModify := localState.State()
+
+	newState, newConfig := generateNewTFState(stateToModify, instMap)
 	fmt.Print("========Successfully generated new state========\n")
 	outputConfig(newConfig)
-	outputState(newState)
+	outputState(&localState, newState, true)
 }
