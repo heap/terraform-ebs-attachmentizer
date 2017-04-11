@@ -1,5 +1,5 @@
 {
-    "memo": "5e5562060badbf1660e42f68610c1fc62c131690729d0f5563739b157dc1aaeb",
+    "memo": "7210f76b29ffef289bd9131819c25f974987a7ec063246784f25832be2033f86",
     "projects": [
         {
             "name": "github.com/apparentlymart/go-cidr",
@@ -48,14 +48,6 @@
             "revision": "9fd32a8b3d3d3f9d43c341bfe098430e07609480",
             "packages": [
                 "netrc"
-            ]
-        },
-        {
-            "name": "github.com/davecgh/go-spew",
-            "version": "v1.1.0",
-            "revision": "346938d642f2ec3594ed81d874461961cd0faa76",
-            "packages": [
-                "spew"
             ]
         },
         {
@@ -149,6 +141,14 @@
                 "helper/shadow",
                 "state",
                 "terraform"
+            ]
+        },
+        {
+            "name": "github.com/jessevdk/go-flags",
+            "version": "v1.2.0",
+            "revision": "48cf8722c3375517aba351d1f7577c40663a4407",
+            "packages": [
+                "."
             ]
         },
         {
