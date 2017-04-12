@@ -7,11 +7,11 @@ import (
 )
 
 type Options struct {
-	AvailabilityZone string         `short:"r" long:"region" description:"AWS availability zone" required:"true"`
-	ToFile           bool           `short:"f" long:"tofile" description:"Whether to write state to file"`
-	InstancePattern  string         `short:"p" long:"pattern" description:"EC2 naming pattern" required:"true"`
-	OutPath          flags.Filename `short:"o" long:"outpath" default:"/tmp/out.tfstate" description:"File out path"`
-	StatePath        flags.Filename `short:"s" long:"statepath" description:"Current .tfstate location" required:"true"`
+	Region          string         `short:"r" long:"region" description:"AWS region" required:"true"`
+	ToFile          bool           `short:"w" long:"write" description:"Whether to write state to file"`
+	InstancePattern string         `short:"p" long:"pattern" description:"EC2 instance name pattern" required:"true"`
+	OutPath         flags.Filename `short:"o" long:"outpath" default:"/tmp/out.tfstate" description:"File out path"`
+	StatePath       flags.Filename `short:"s" long:"statepath" description:"Current .tfstate location" required:"true"`
 }
 
 func main() {
