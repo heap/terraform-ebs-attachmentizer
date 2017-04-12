@@ -26,7 +26,7 @@ func main() {
 		}
 	}
 
-	instDevMap, err := GetEC2AWSState(opts.InstancePattern, opts.AvailabilityZone)
+	instDevMap, err := GetEC2AWSState(opts.InstancePattern, opts.Region)
 	if err != nil {
 		log.Fatalf("ec2 failed: %v", err)
 	}
