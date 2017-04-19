@@ -19,21 +19,6 @@ func normalizeDeviceName(dev string) string {
 	}
 }
 
-func generateResourceConfig(resourceType string, resourceName string, attrMap map[string]string) string {
-	var configBuf bytes.Buffer
-	configBuf.WriteString(fmt.Sprintf("resource \"%v\" \"%v\" {", resourceType, resourceName))
-
-	for attribute, value := range attrMap {
-		// The attribute map will contain the id, but it doesn't belong in the config.
-		if attribute != "id" {
-			configBuf.WriteString(fmt.Sprintf("\n\t%s = \"%s\"", attribute, value))
-		}
-	}
-
-	configBuf.WriteString("\n}")
-	return configBuf.String()
-}
-
 // A wrapper around a device name that allows getting it with and without the
 // `/dev/` prefix.
 type DeviceName struct {
@@ -82,16 +67,17 @@ type BlockDevice struct {
 	instanceResName  *TerraformName
 }
 
+func (dev *BlockDevice) NameWithoutCount() string {
+	return fmt.Sprintf("%s-%s", dev.instanceResName.name, dev.deviceName.ShortName())
+}
+
 func (dev *BlockDevice) UniqueName() string {
 	indexPart := ""
 	if dev.instanceResName.index != -1 {
 		indexPart = fmt.Sprintf(".%v", dev.instanceResName.index)
 	}
 
-	return fmt.Sprintf("%s-%s%s",
-		dev.instanceResName.name,
-		dev.deviceName.ShortName(),
-		indexPart)
+	return fmt.Sprintf("%s%s", dev.NameWithoutCount(), indexPart)
 }
 
 func (dev *BlockDevice) VolumeName() string {
@@ -176,20 +162,4 @@ func (dev *BlockDevice) makeAttachmentRes() *tf.ResourceState {
 		},
 	}
 	return newRes
-}
-
-// Generate a configuration for the `aws_ebs_volume` resource from a specific
-// block device.
-func (dev *BlockDevice) makeVolumeConfig() string {
-	attrs := dev.makeVolumeAttrs()
-	return generateResourceConfig("aws_ebs_volume", dev.UniqueName(), attrs)
-}
-
-// Generate a configuration for the `aws_volume_attachment` resource from a specific
-// block device.
-// :TODO: Make this print `instance_id` and `volume_id` via resource reference rather
-//        than the raw ids.
-func (dev *BlockDevice) makeAttachmentConfig() string {
-	attrs := dev.makeAttachmentAttrs()
-	return generateResourceConfig("aws_volume_attachment", dev.UniqueName(), attrs)
 }
