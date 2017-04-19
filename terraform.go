@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -215,33 +214,25 @@ func generateNewTFState(stateToModify *tf.State, instMap map[string]Instance) (*
 	return outState, configBuf.String()
 }
 
-// :TODO: Add the option to print a diff.
-func outputState(localState *tfstate.LocalState, newState *tf.State, toFile bool) {
-	json, _ := json.MarshalIndent(newState.Modules[0].Resources, "", "  ")
-	fmt.Print("\n________New Terraform state (JSON)________\n\n")
-	os.Stdout.Write(json)
-
-	if toFile {
-		// WriteState updates the state `serial`, so we don't have to worry about it.
-		localState.WriteState(newState)
-	}
-}
-
-// :TODO: Provide option to write this to a user-specified file, rather than just printing.
-func outputConfig(config string) {
-	fmt.Print("\n________Suggested .tf configuration________\n")
-	fmt.Print(config)
-}
-
 // Do The Conversion on the Terraform state file given the extra resource ID
 // information from EC2.
-func ConvertTFState(stateFilePath string, outFilePath string, toFile bool, instMap map[string]Instance) {
-	localState := tfstate.LocalState{Path: stateFilePath, PathOut: outFilePath}
+func ConvertTFState(stateFilePath string, stateOutPath string, configOutPath string, instMap map[string]Instance) {
+	localState := tfstate.LocalState{Path: stateFilePath, PathOut: stateOutPath}
 	localState.RefreshState()
 	stateToModify := localState.State()
 
 	newState, newConfig := generateNewTFState(stateToModify, instMap)
 	fmt.Print("========Successfully generated new state========\n")
-	outputConfig(newConfig)
-	outputState(&localState, newState, toFile)
+
+	// WriteState updates the state `serial`, so we don't have to worry about it.
+	localState.WriteState(newState)
+  fmt.Printf("Wrote new state file to %v", stateOutPath)
+
+	f, err := os.Create(configOutPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	f.WriteString(newConfig)
+  fmt.Printf("\nWrote configuration suggestion to %v", configOutPath)
 }
