@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -141,8 +140,8 @@ func mergeAndValidateBlockDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) (B
 func generateNewTFState(stateToModify *tf.State, instMap map[string]Instance) (*tf.State, string) {
 	outState := stateToModify.DeepCopy()
 	root := outState.Modules[0]
-	var configBuf bytes.Buffer
 
+	var newDevs []BlockDevice
 	newResources := make(map[string]*tf.ResourceState)
 
 	for name, res := range root.Resources {
@@ -202,8 +201,7 @@ func generateNewTFState(stateToModify *tf.State, instMap map[string]Instance) (*
 			newResources[dev.VolumeName()] = volumeRes
 			newResources[dev.VolumeAttachmentName()] = attachmentRes
 
-			configBuf.WriteString(fmt.Sprintf("\n%s\n", dev.makeVolumeConfig()))
-			configBuf.WriteString(fmt.Sprintf("\n%s\n", dev.makeAttachmentConfig()))
+			newDevs = append(newDevs, dev)
 		}
 	}
 
@@ -211,7 +209,8 @@ func generateNewTFState(stateToModify *tf.State, instMap map[string]Instance) (*
 		root.Resources[k] = v
 	}
 
-	return outState, configBuf.String()
+	config := genConfig(newDevs)
+	return outState, config
 }
 
 // Do The Conversion on the Terraform state file given the extra resource ID
@@ -226,7 +225,7 @@ func ConvertTFState(stateFilePath string, stateOutPath string, configOutPath str
 
 	// WriteState updates the state `serial`, so we don't have to worry about it.
 	localState.WriteState(newState)
-  fmt.Printf("Wrote new state file to %v", stateOutPath)
+	fmt.Printf("Wrote new state file to %v", stateOutPath)
 
 	f, err := os.Create(configOutPath)
 	if err != nil {
@@ -234,5 +233,5 @@ func ConvertTFState(stateFilePath string, stateOutPath string, configOutPath str
 	}
 	defer f.Close()
 	f.WriteString(newConfig)
-  fmt.Printf("\nWrote configuration suggestion to %v", configOutPath)
+	fmt.Printf("\nWrote configuration suggestion to %v", configOutPath)
 }
