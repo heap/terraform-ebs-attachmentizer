@@ -1,4 +1,4 @@
-# blkdev2volatt
+# terraform-ebs-attachmentizer
 
 Convert `ebs_block_device` blocks in `aws_instance` resource to `aws_ebs_volume`
 and `aws_volume_attachment` resources.
@@ -8,7 +8,7 @@ and `aws_volume_attachment` resources.
 
 ## Usage
 
-    blkdev2volatt INSTANCE REGION STATEFILE
+    terraform-ebs-attachmentizer INSTANCE REGION STATEFILE
 
 - `INSTANCE` is the value of the `Name` tag in EC2 for the instance to act
   on. It may be a pattern like `something-*`, in which case all matching
