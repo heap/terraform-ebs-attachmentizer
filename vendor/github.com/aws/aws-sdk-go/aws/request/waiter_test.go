@@ -15,6 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/awstesting"
+	"github.com/aws/aws-sdk-go/awstesting/unit"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 type mockClient struct {
@@ -271,7 +273,9 @@ func TestWaiterError(t *testing.T) {
 				{State: aws.String("pending")},
 			},
 		},
-		{ // Request 2, error case
+		{ // Request 1, error case retry
+		},
+		{ // Request 2, error case failure
 		},
 		{ // Request 3
 			States: []*MockState{
@@ -280,6 +284,9 @@ func TestWaiterError(t *testing.T) {
 			},
 		},
 	}
+	reqErrs := make([]error, len(resps))
+	reqErrs[1] = awserr.New("MockException", "mock exception message", nil)
+	reqErrs[2] = awserr.New("FailureException", "mock failure exception message", nil)
 
 	numBuiltReq := 0
 	svc.Handlers.Build.PushBack(func(r *request.Request) {
@@ -305,10 +312,10 @@ func TestWaiterError(t *testing.T) {
 		reqNum++
 	})
 	svc.Handlers.UnmarshalMeta.PushBack(func(r *request.Request) {
-		if reqNum == 1 {
-			r.Error = awserr.New("MockException", "mock exception message", nil)
-			// If there was an error unmarshal error will be called instead of unmarshal
-			// need to increment count here also
+		// If there was an error unmarshal error will be called instead of unmarshal
+		// need to increment count here also
+		if err := reqErrs[reqNum]; err != nil {
+			r.Error = err
 			reqNum++
 		}
 	})
@@ -329,14 +336,30 @@ func TestWaiterError(t *testing.T) {
 				Argument: "",
 				Expected: "MockException",
 			},
+			{
+				State:    request.FailureWaiterState,
+				Matcher:  request.ErrorWaiterMatch,
+				Argument: "",
+				Expected: "FailureException",
+			},
 		},
 		NewRequest: BuildNewMockRequest(svc, &MockInput{}),
 	}
 
 	err := w.WaitWithContext(aws.BackgroundContext())
-	assert.NoError(t, err)
-	assert.Equal(t, 3, numBuiltReq)
-	assert.Equal(t, 3, reqNum)
+	if err == nil {
+		t.Fatalf("expected error, but did not get one")
+	}
+	aerr := err.(awserr.Error)
+	if e, a := request.WaiterResourceNotReadyErrorCode, aerr.Code(); e != a {
+		t.Errorf("expect %q error code, got %q", e, a)
+	}
+	if e, a := 3, numBuiltReq; e != a {
+		t.Errorf("expect %d built requests got %d", e, a)
+	}
+	if e, a := 3, reqNum; e != a {
+		t.Errorf("expect %d reqNum got %d", e, a)
+	}
 }
 
 func TestWaiterStatus(t *testing.T) {
@@ -555,5 +578,59 @@ func TestWaiter_AttemptsExpires(t *testing.T) {
 	}
 	if e, a := 2, reqCount; e != a {
 		t.Errorf("expect %d requests, got %d", e, a)
+	}
+}
+
+func TestWaiterNilInput(t *testing.T) {
+	// Code generation doesn't have a great way to verify the code is correct
+	// other than being run via unit tests in the SDK. This should be fixed
+	// So code generation can be validated independently.
+
+	client := s3.New(unit.Session)
+	client.Handlers.Validate.Clear()
+	client.Handlers.Send.Clear() // mock sending
+	client.Handlers.Send.PushBack(func(r *request.Request) {
+		r.HTTPResponse = &http.Response{
+			StatusCode: http.StatusOK,
+		}
+	})
+	client.Handlers.Unmarshal.Clear()
+	client.Handlers.UnmarshalMeta.Clear()
+	client.Handlers.ValidateResponse.Clear()
+	client.Config.SleepDelay = func(dur time.Duration) {}
+
+	// Ensure waiters do not panic on nil input. It doesn't make sense to
+	// call a waiter without an input, Validation will
+	err := client.WaitUntilBucketExists(nil)
+	if err != nil {
+		t.Fatalf("expect no error, but got %v", err)
+	}
+}
+
+func TestWaiterWithContextNilInput(t *testing.T) {
+	// Code generation doesn't have a great way to verify the code is correct
+	// other than being run via unit tests in the SDK. This should be fixed
+	// So code generation can be validated independently.
+
+	client := s3.New(unit.Session)
+	client.Handlers.Validate.Clear()
+	client.Handlers.Send.Clear() // mock sending
+	client.Handlers.Send.PushBack(func(r *request.Request) {
+		r.HTTPResponse = &http.Response{
+			StatusCode: http.StatusOK,
+		}
+	})
+	client.Handlers.Unmarshal.Clear()
+	client.Handlers.UnmarshalMeta.Clear()
+	client.Handlers.ValidateResponse.Clear()
+
+	// Ensure waiters do not panic on nil input
+	ctx := &awstesting.FakeContext{DoneCh: make(chan struct{})}
+	err := client.WaitUntilBucketExistsWithContext(ctx, nil,
+		request.WithWaiterDelay(request.ConstantWaiterDelay(0)),
+		request.WithWaiterMaxAttempts(1),
+	)
+	if err != nil {
+		t.Fatalf("expect no error, but got %v", err)
 	}
 }

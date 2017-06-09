@@ -45,8 +45,12 @@ func init() {
 	protocol.RandReader = &awstesting.ZeroReader{}
 }
 
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// OutputService1ProtocolTest provides the API operation methods for making requests to
+// . See this package's package overview docs
+// for details on the service.
+//
+// OutputService1ProtocolTest methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type OutputService1ProtocolTest struct {
 	*client.Client
 }
@@ -241,8 +245,12 @@ func (s *OutputService1TestShapeOutputService1TestCaseOperation1Output) SetTrueB
 	return s
 }
 
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// OutputService2ProtocolTest provides the API operation methods for making requests to
+// . See this package's package overview docs
+// for details on the service.
+//
+// OutputService2ProtocolTest methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type OutputService2ProtocolTest struct {
 	*client.Client
 }
@@ -403,8 +411,12 @@ func (s *OutputService2TestShapeOutputService2TestCaseOperation1Output) SetStruc
 	return s
 }
 
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// OutputService3ProtocolTest provides the API operation methods for making requests to
+// . See this package's package overview docs
+// for details on the service.
+//
+// OutputService3ProtocolTest methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type OutputService3ProtocolTest struct {
 	*client.Client
 }
@@ -563,8 +575,12 @@ func (s *OutputService3TestShapeTimeContainer) SetFoo(v time.Time) *OutputServic
 	return s
 }
 
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// OutputService4ProtocolTest provides the API operation methods for making requests to
+// . See this package's package overview docs
+// for details on the service.
+//
+// OutputService4ProtocolTest methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type OutputService4ProtocolTest struct {
 	*client.Client
 }
@@ -643,7 +659,7 @@ const opOutputService4TestCaseOperation1 = "OperationName"
 //    if err == nil { // resp is now filled
 //        fmt.Println(resp)
 //    }
-func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1Request(input *OutputService4TestShapeOutputService4TestCaseOperation1Input) (req *request.Request, output *OutputService4TestShapeOutputShape) {
+func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1Request(input *OutputService4TestShapeOutputService4TestCaseOperation1Input) (req *request.Request, output *OutputService4TestShapeOutputService4TestCaseOperation2Output) {
 	op := &request.Operation{
 		Name:     opOutputService4TestCaseOperation1,
 		HTTPPath: "/",
@@ -653,7 +669,7 @@ func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1Request(inp
 		input = &OutputService4TestShapeOutputService4TestCaseOperation1Input{}
 	}
 
-	output = &OutputService4TestShapeOutputShape{}
+	output = &OutputService4TestShapeOutputService4TestCaseOperation2Output{}
 	req = c.newRequest(op, input, output)
 	return
 }
@@ -666,7 +682,7 @@ func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1Request(inp
 //
 // See the AWS API reference guide for 's
 // API operation OutputService4TestCaseOperation1 for usage and error information.
-func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1(input *OutputService4TestShapeOutputService4TestCaseOperation1Input) (*OutputService4TestShapeOutputShape, error) {
+func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1(input *OutputService4TestShapeOutputService4TestCaseOperation1Input) (*OutputService4TestShapeOutputService4TestCaseOperation2Output, error) {
 	req, out := c.OutputService4TestCaseOperation1Request(input)
 	return out, req.Send()
 }
@@ -680,7 +696,7 @@ func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1(input *Out
 // the context is nil a panic will occur. In the future the SDK may create
 // sub-contexts for http.Requests. See https://golang.org/pkg/context/
 // for more information on using Contexts.
-func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1WithContext(ctx aws.Context, input *OutputService4TestShapeOutputService4TestCaseOperation1Input, opts ...request.Option) (*OutputService4TestShapeOutputShape, error) {
+func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation1WithContext(ctx aws.Context, input *OutputService4TestShapeOutputService4TestCaseOperation1Input, opts ...request.Option) (*OutputService4TestShapeOutputService4TestCaseOperation2Output, error) {
 	req, out := c.OutputService4TestCaseOperation1Request(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
@@ -712,7 +728,7 @@ const opOutputService4TestCaseOperation2 = "OperationName"
 //    if err == nil { // resp is now filled
 //        fmt.Println(resp)
 //    }
-func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2Request(input *OutputService4TestShapeOutputService4TestCaseOperation2Input) (req *request.Request, output *OutputService4TestShapeOutputShape) {
+func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2Request(input *OutputService4TestShapeOutputService4TestCaseOperation2Input) (req *request.Request, output *OutputService4TestShapeOutputService4TestCaseOperation2Output) {
 	op := &request.Operation{
 		Name:     opOutputService4TestCaseOperation2,
 		HTTPPath: "/",
@@ -722,7 +738,7 @@ func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2Request(inp
 		input = &OutputService4TestShapeOutputService4TestCaseOperation2Input{}
 	}
 
-	output = &OutputService4TestShapeOutputShape{}
+	output = &OutputService4TestShapeOutputService4TestCaseOperation2Output{}
 	req = c.newRequest(op, input, output)
 	return
 }
@@ -735,7 +751,7 @@ func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2Request(inp
 //
 // See the AWS API reference guide for 's
 // API operation OutputService4TestCaseOperation2 for usage and error information.
-func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2(input *OutputService4TestShapeOutputService4TestCaseOperation2Input) (*OutputService4TestShapeOutputShape, error) {
+func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2(input *OutputService4TestShapeOutputService4TestCaseOperation2Input) (*OutputService4TestShapeOutputService4TestCaseOperation2Output, error) {
 	req, out := c.OutputService4TestCaseOperation2Request(input)
 	return out, req.Send()
 }
@@ -749,7 +765,7 @@ func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2(input *Out
 // the context is nil a panic will occur. In the future the SDK may create
 // sub-contexts for http.Requests. See https://golang.org/pkg/context/
 // for more information on using Contexts.
-func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2WithContext(ctx aws.Context, input *OutputService4TestShapeOutputService4TestCaseOperation2Input, opts ...request.Option) (*OutputService4TestShapeOutputShape, error) {
+func (c *OutputService4ProtocolTest) OutputService4TestCaseOperation2WithContext(ctx aws.Context, input *OutputService4TestShapeOutputService4TestCaseOperation2Input, opts ...request.Option) (*OutputService4TestShapeOutputService4TestCaseOperation2Output, error) {
 	req, out := c.OutputService4TestCaseOperation2Request(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
@@ -764,7 +780,7 @@ type OutputService4TestShapeOutputService4TestCaseOperation2Input struct {
 	_ struct{} `type:"structure"`
 }
 
-type OutputService4TestShapeOutputShape struct {
+type OutputService4TestShapeOutputService4TestCaseOperation2Output struct {
 	_ struct{} `type:"structure"`
 
 	ListMember []*string `type:"list"`
@@ -775,19 +791,19 @@ type OutputService4TestShapeOutputShape struct {
 }
 
 // SetListMember sets the ListMember field's value.
-func (s *OutputService4TestShapeOutputShape) SetListMember(v []*string) *OutputService4TestShapeOutputShape {
+func (s *OutputService4TestShapeOutputService4TestCaseOperation2Output) SetListMember(v []*string) *OutputService4TestShapeOutputService4TestCaseOperation2Output {
 	s.ListMember = v
 	return s
 }
 
 // SetListMemberMap sets the ListMemberMap field's value.
-func (s *OutputService4TestShapeOutputShape) SetListMemberMap(v []map[string]*string) *OutputService4TestShapeOutputShape {
+func (s *OutputService4TestShapeOutputService4TestCaseOperation2Output) SetListMemberMap(v []map[string]*string) *OutputService4TestShapeOutputService4TestCaseOperation2Output {
 	s.ListMemberMap = v
 	return s
 }
 
 // SetListMemberStruct sets the ListMemberStruct field's value.
-func (s *OutputService4TestShapeOutputShape) SetListMemberStruct(v []*OutputService4TestShapeStructType) *OutputService4TestShapeOutputShape {
+func (s *OutputService4TestShapeOutputService4TestCaseOperation2Output) SetListMemberStruct(v []*OutputService4TestShapeStructType) *OutputService4TestShapeOutputService4TestCaseOperation2Output {
 	s.ListMemberStruct = v
 	return s
 }
@@ -796,8 +812,12 @@ type OutputService4TestShapeStructType struct {
 	_ struct{} `type:"structure"`
 }
 
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// OutputService5ProtocolTest provides the API operation methods for making requests to
+// . See this package's package overview docs
+// for details on the service.
+//
+// OutputService5ProtocolTest methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type OutputService5ProtocolTest struct {
 	*client.Client
 }
@@ -936,8 +956,12 @@ func (s *OutputService5TestShapeOutputService5TestCaseOperation1Output) SetMapMe
 	return s
 }
 
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// OutputService6ProtocolTest provides the API operation methods for making requests to
+// . See this package's package overview docs
+// for details on the service.
+//
+// OutputService6ProtocolTest methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type OutputService6ProtocolTest struct {
 	*client.Client
 }

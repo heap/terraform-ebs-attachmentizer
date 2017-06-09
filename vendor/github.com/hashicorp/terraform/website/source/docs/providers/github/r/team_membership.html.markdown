@@ -6,7 +6,7 @@ description: |-
   Provides a GitHub team membership resource.
 ---
 
-# github\_team_membership
+# github_team_membership
 
 Provides a GitHub team membership resource.
 
@@ -17,7 +17,7 @@ destroyed, the user will be removed from the team.
 
 ## Example Usage
 
-```
+```hcl
 # Add a user to the organization
 resource "github_membership" "membership_for_some_user" {
   username = "SomeUser"
@@ -44,3 +44,11 @@ The following arguments are supported:
 * `username` - (Required) The user to add to the team.
 * `role` - (Optional) The role of the user within the team.
             Must be one of `member` or `maintainer`. Defaults to `member`.
+
+## Import
+
+Github Team Membership can be imported using an id made up of `teamid:username`, e.g.
+
+```
+$ terraform import github_team_membership.member 1234567:someuser
+```
