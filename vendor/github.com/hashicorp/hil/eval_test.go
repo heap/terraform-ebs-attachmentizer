@@ -152,6 +152,43 @@ func TestEval(t *testing.T) {
 			TypeString,
 		},
 		{
+			"${var.alist[1]}",
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"var.alist": ast.Variable{
+						Type:  ast.TypeUnknown,
+						Value: UnknownValue,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			TypeUnknown,
+		},
+		{
+			"${var.alist[var.index]}",
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"var.alist": ast.Variable{
+						Type: ast.TypeList,
+						Value: []ast.Variable{
+							ast.Variable{
+								Type:  ast.TypeString,
+								Value: "Hello",
+							},
+						},
+					},
+					"var.index": ast.Variable{
+						Type:  ast.TypeUnknown,
+						Value: UnknownValue,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			TypeUnknown,
+		},
+		{
 			"${var.alist} ${var.alist}",
 			&ast.BasicScope{
 				VarMap: map[string]ast.Variable{
@@ -173,6 +210,29 @@ func TestEval(t *testing.T) {
 			true,
 			nil,
 			TypeInvalid,
+		},
+		{
+			"${var.alist[1]}",
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"var.alist": ast.Variable{
+						Type: ast.TypeList,
+						Value: []ast.Variable{
+							ast.Variable{
+								Type:  ast.TypeUnknown,
+								Value: UnknownValue,
+							},
+							ast.Variable{
+								Type:  ast.TypeString,
+								Value: "World",
+							},
+						},
+					},
+				},
+			},
+			false,
+			"World",
+			TypeString,
 		},
 		{
 			`${foo}`,
@@ -224,6 +284,28 @@ func TestEval(t *testing.T) {
 			TypeString,
 		},
 		{
+			`${foo["foo"]}`,
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"foo": ast.Variable{
+						Type: ast.TypeMap,
+						Value: map[string]ast.Variable{
+							"foo": ast.Variable{
+								Type:  ast.TypeString,
+								Value: "hello",
+							},
+							"bar": ast.Variable{
+								Type: ast.TypeUnknown,
+							},
+						},
+					},
+				},
+			},
+			false,
+			"hello",
+			TypeString,
+		},
+		{
 			`${foo["bar"]}`,
 			&ast.BasicScope{
 				VarMap: map[string]ast.Variable{
@@ -244,6 +326,28 @@ func TestEval(t *testing.T) {
 			false,
 			UnknownValue,
 			TypeUnknown,
+		},
+		{
+			`${foo["foo"]} foo`,
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"foo": ast.Variable{
+						Type: ast.TypeMap,
+						Value: map[string]ast.Variable{
+							"foo": ast.Variable{
+								Type:  ast.TypeString,
+								Value: "hello",
+							},
+							"bar": ast.Variable{
+								Type: ast.TypeUnknown,
+							},
+						},
+					},
+				},
+			},
+			false,
+			"hello foo",
+			TypeString,
 		},
 		{
 			`${foo["bar"]} foo`,
@@ -437,6 +541,121 @@ func TestEval(t *testing.T) {
 				"World",
 			},
 			TypeList,
+		},
+		{
+			"${var.alist[0] + var.alist[1]}",
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"var.alist": ast.Variable{
+						Type: ast.TypeList,
+						Value: []ast.Variable{
+							ast.Variable{
+								Type:  ast.TypeUnknown,
+								Value: UnknownValue,
+							},
+							ast.Variable{
+								Type:  ast.TypeInt,
+								Value: 2,
+							},
+						},
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			TypeUnknown,
+		},
+		{
+			// Unknowns can short-circuit bits of our type checking
+			// AST transform, such as the promotion of arithmetic to
+			// functions. This test ensures that the evaluator and the
+			// type checker co-operate to ensure that this doesn't cause
+			// raw arithmetic nodes to be evaluated (which is not supported).
+			"${var.alist[0 + var.unknown]}",
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"var.alist": ast.Variable{
+						Type: ast.TypeList,
+						Value: []ast.Variable{
+							ast.Variable{
+								Type:  ast.TypeInt,
+								Value: 2,
+							},
+						},
+					},
+					"var.unknown": ast.Variable{
+						Type:  ast.TypeUnknown,
+						Value: UnknownValue,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			TypeUnknown,
+		},
+		{
+			"${join(var.alist)}",
+			&ast.BasicScope{
+				FuncMap: map[string]ast.Function{
+					"join": ast.Function{
+						ArgTypes:   []ast.Type{ast.TypeList},
+						ReturnType: ast.TypeString,
+						Callback: func(args []interface{}) (interface{}, error) {
+							return nil, fmt.Errorf("should never actually be called")
+						},
+					},
+				},
+				VarMap: map[string]ast.Variable{
+					"var.alist": ast.Variable{
+						Type: ast.TypeList,
+						Value: []ast.Variable{
+							ast.Variable{
+								Type:  ast.TypeUnknown,
+								Value: UnknownValue,
+							},
+							ast.Variable{
+								Type:  ast.TypeString,
+								Value: "World",
+							},
+						},
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			TypeUnknown,
+		},
+		{
+			"${upper(var.alist[1])}",
+			&ast.BasicScope{
+				FuncMap: map[string]ast.Function{
+					"upper": ast.Function{
+						ArgTypes:   []ast.Type{ast.TypeString},
+						ReturnType: ast.TypeString,
+						Callback: func(args []interface{}) (interface{}, error) {
+							return strings.ToUpper(args[0].(string)), nil
+						},
+					},
+				},
+				VarMap: map[string]ast.Variable{
+					"var.alist": ast.Variable{
+						Type: ast.TypeList,
+						Value: []ast.Variable{
+							ast.Variable{
+								Type:  ast.TypeUnknown,
+								Value: UnknownValue,
+							},
+							ast.Variable{
+								Type:  ast.TypeString,
+								Value: "World",
+							},
+						},
+					},
+				},
+			},
+			false,
+			"WORLD",
+			TypeString,
 		},
 		{
 			`${foo[upper(bar)]}`,
@@ -964,6 +1183,123 @@ func TestEvalInternal(t *testing.T) {
 		},
 
 		{
+			"${var.do_it ? 5 : 7}",
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"var.do_it": ast.Variable{
+						Value: UnknownValue,
+						Type:  ast.TypeUnknown,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			ast.TypeUnknown,
+		},
+
+		{
+			// false expression can be unknown, and is returned
+			`foo ${false ? "12" : unknown}`,
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"unknown": ast.Variable{
+						Value: UnknownValue,
+						Type:  ast.TypeUnknown,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			ast.TypeUnknown,
+		},
+
+		{
+			// false expression can be unknown, and result is unknown even
+			// if it's not selected.
+			// (Ideally this would not be true, but we're accepting this
+			// for now since this assumption is built in to the core evaluator)
+			`foo ${true ? "12" : unknown}`,
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"unknown": ast.Variable{
+						Value: UnknownValue,
+						Type:  ast.TypeUnknown,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			ast.TypeUnknown,
+		},
+
+		{
+			// true expression can be unknown, and is returned
+			`foo ${false ? unknown : "bar"}`,
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"unknown": ast.Variable{
+						Value: UnknownValue,
+						Type:  ast.TypeUnknown,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			ast.TypeUnknown,
+		},
+
+		{
+			// true expression can be unknown, and result is unknown even
+			// if it's not selected.
+			// (Ideally this would not be true, but we're accepting this
+			// for now since this assumption is built in to the core evaluator)
+			`foo ${false ? unknown : "bar"}`,
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"unknown": ast.Variable{
+						Value: UnknownValue,
+						Type:  ast.TypeUnknown,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			ast.TypeUnknown,
+		},
+
+		{
+			// both values can be unknown
+			`foo ${false ? unknown : unknown}`,
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"unknown": ast.Variable{
+						Value: UnknownValue,
+						Type:  ast.TypeUnknown,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			ast.TypeUnknown,
+		},
+
+		{
+			// condition can be unknown, and result is unknown
+			`foo ${unknown ? "baz" : "bar"}`,
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"unknown": ast.Variable{
+						Value: UnknownValue,
+						Type:  ast.TypeUnknown,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			ast.TypeUnknown,
+		},
+
+		{
 			"foo ${-bar}",
 			&ast.BasicScope{
 				VarMap: map[string]ast.Variable{
@@ -1044,6 +1380,25 @@ func TestEvalInternal(t *testing.T) {
 			false,
 			"foo 0.003",
 			ast.TypeString,
+		},
+
+		{
+			"foo ${bar+baz}",
+			&ast.BasicScope{
+				VarMap: map[string]ast.Variable{
+					"bar": ast.Variable{
+						Value: UnknownValue,
+						Type:  ast.TypeUnknown,
+					},
+					"baz": ast.Variable{
+						Value: 1,
+						Type:  ast.TypeInt,
+					},
+				},
+			},
+			false,
+			UnknownValue,
+			ast.TypeUnknown,
 		},
 
 		{
@@ -1658,13 +2013,13 @@ func TestEvalInternal(t *testing.T) {
 
 			out, outType, err := internalEval(node, &EvalConfig{GlobalScope: tc.Scope})
 			if err != nil != tc.Error {
-				t.Fatalf("Error: %s\n\nInput: %s", err, tc.Input)
+				t.Fatalf("Error: %s\nInput: %s", err, tc.Input)
 			}
 			if tc.ResultType != ast.TypeInvalid && outType != tc.ResultType {
-				t.Fatalf("Bad: %s\n\nInput: %s", outType, tc.Input)
+				t.Fatalf("Wrong result type\nInput: %s\nGot:   %#s\nWant:  %s", tc.Input, outType, tc.ResultType)
 			}
 			if !reflect.DeepEqual(out, tc.Result) {
-				t.Fatalf("\n  Got: %#v\n Want: %#v\n\nInput: %s\n", out, tc.Result, tc.Input)
+				t.Fatalf("Wrong result value\nInput: %s\nGot:   %#s\nWant:  %s", tc.Input, out, tc.Result)
 			}
 		})
 	}

@@ -90,6 +90,42 @@ func TestAccNetworkingV2Network_fullstack(t *testing.T) {
 	})
 }
 
+func TestAccNetworkingV2Network_timeout(t *testing.T) {
+	var network networks.Network
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckNetworkingV2NetworkDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccNetworkingV2Network_timeout,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckNetworkingV2NetworkExists("openstack_networking_network_v2.network_1", &network),
+				),
+			},
+		},
+	})
+}
+
+func TestAccNetworkingV2Network_with_multiple_segment_mappings(t *testing.T) {
+	var network networks.Network
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckNetworkingV2NetworkDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccNetworkingV2Network_with_multiple_segment_mappings,
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckNetworkingV2NetworkExists("openstack_networking_network_v2.network_1", &network),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckNetworkingV2NetworkDestroy(s *terraform.State) error {
 	config := testAccProvider.Meta().(*Config)
 	networkingClient, err := config.networkingV2Client(OS_REGION_NAME)
@@ -223,5 +259,30 @@ resource "openstack_compute_instance_v2" "instance_1" {
   network {
     port = "${openstack_networking_port_v2.port_1.id}"
   }
+}
+`
+
+const testAccNetworkingV2Network_timeout = `
+resource "openstack_networking_network_v2" "network_1" {
+  name = "network_1"
+  admin_state_up = "true"
+
+  timeouts {
+    create = "5m"
+    delete = "5m"
+  }
+}
+`
+
+const testAccNetworkingV2Network_with_multiple_segment_mappings = `
+resource "openstack_networking_network_v2" "network_1" {
+  name = "network_1"
+  segments =[
+    {
+      segmentation_id = 2,
+      network_type = "vxlan"
+    }
+  ],
+  admin_state_up = "true"
 }
 `

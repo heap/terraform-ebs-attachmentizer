@@ -25,10 +25,12 @@ When upgrading the major version of an engine, `allow_major_version_upgrade` mus
 brief downtime as the server reboots. See the AWS Docs on [RDS Maintenance][2]
 for more information.
 
+~> **Note:** All arguments including the username and password will be stored in the raw state as plain-text.
+[Read more about sensitive data in state](/docs/state/sensitive-data.html).
 
 ## Example Usage
 
-```
+```hcl
 resource "aws_db_instance" "default" {
   allocated_storage    = 10
   storage_type         = "gp2"
@@ -53,7 +55,8 @@ The following arguments are supported:
 * `allocated_storage` - (Required unless a `snapshot_identifier` or `replicate_source_db` is provided) The allocated storage in gigabytes.
 * `engine` - (Required unless a `snapshot_identifier` or `replicate_source_db` is provided) The database engine to use.
 * `engine_version` - (Optional) The engine version to use.
-* `identifier` - (Optional) The name of the RDS instance, if omitted, Terraform will assign a random, unique name
+* `identifier` - (Optional, Forces new resource) The name of the RDS instance, if omitted, Terraform will assign a random, unique identifier.
+* `identifier_prefix` - (Optional, Forces new resource) Creates a unique identifier beginning with the specified prefix. Conflicts with `identifer`.
 * `instance_class` - (Required) The instance type of the RDS instance.
 * `storage_type` - (Optional) One of "standard" (magnetic), "gp2" (general
     purpose SSD), or "io1" (provisioned IOPS SSD). The default is "io1" if
@@ -73,12 +76,12 @@ the final snapshot (if `final_snapshot_identifier` is specified). Default
 * `availability_zone` - (Optional) The AZ for the RDS instance.
 * `backup_retention_period` - (Optional) The days to retain backups for. Must be
 `1` or greater to be a source for a [Read Replica][1].
-* `backup_window` - (Optional) The backup window.
+* `backup_window` - (Optional) The daily time range (in UTC) during which automated backups are created if they are enabled. Example: "09:46-10:16". Must not overlap with `maintenance_window`.
 * `iops` - (Optional) The amount of provisioned IOPS. Setting this implies a
     storage_type of "io1".
 * `maintenance_window` - (Optional) The window to perform maintenance in.
   Syntax: "ddd:hh24:mi-ddd:hh24:mi". Eg: "Mon:00:00-Mon:03:00".
-  See [RDS Maintenance Window docs](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/AdjustingTheMaintenanceWindow.html) for more.
+  See [RDS Maintenance Window docs](http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.Maintenance.html#AdjustingTheMaintenanceWindow) for more.
 * `multi_az` - (Optional) Specifies if the RDS instance is multi-AZ
 * `port` - (Optional) The port on which the DB accepts connections.
 * `publicly_accessible` - (Optional) Bool to control if instance is publicly accessible. Defaults to `false`.
@@ -109,6 +112,7 @@ what IAM permissions are needed to allow Enhanced Monitoring for RDS Instances.
 * `kms_key_id` - (Optional) The ARN for the KMS encryption key.
 * `character_set_name` - (Optional) The character set name to use for DB encoding in Oracle instances. This can't be changed.
 [Oracle Character Sets Supported in Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.OracleCharacterSets.html)
+* `iam_database_authentication_enabled` - (Optional) Specifies whether or mappings of AWS Identity and Access Management (IAM) accounts to database accounts is enabled.
 * `tags` - (Optional) A mapping of tags to assign to the resource.
 * `timezone` - (Optional) Time zone of the DB instance. `timezone` is currently only supported by Microsoft SQL Server.
 The `timezone` can only be set on creation. See [MSSQL User Guide](http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_SQLServer.html#SQLServer.Concepts.General.TimeZone) for more information
@@ -122,6 +126,7 @@ standalone database.
 The following attributes are exported:
 
 * `id` - The RDS instance ID.
+* `resource_id` - The RDS Resource ID of this instance.
 * `address` - The address of the RDS instance.
 * `arn` - The ARN of the RDS instance.
 * `allocated_storage` - The amount of allocated storage
@@ -154,7 +159,7 @@ On Oracle instances the following is exported additionally:
 
 - `create` - (Default `40 minutes`) Used for Creating Instances, Replicas, and
 restoring from Snapshots
-- `update` - (Default `80 minutes`) Used for Database modifications 
+- `update` - (Default `80 minutes`) Used for Database modifications
 - `delete` - (Default `40 minutes`) Used for destroying databases. This includes
 the time required to take snapshots
 

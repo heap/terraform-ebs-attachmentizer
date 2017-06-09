@@ -206,6 +206,11 @@ func resourceAwsSpotFleetRequest() *schema.Resource {
 							Computed: true,
 							ForceNew: true,
 						},
+						"placement_tenancy": {
+							Type:     schema.TypeString,
+							Optional: true,
+							ForceNew: true,
+						},
 						"spot_price": {
 							Type:     schema.TypeString,
 							Optional: true,
@@ -304,10 +309,15 @@ func buildSpotFleetLaunchSpecification(d map[string]interface{}, meta interface{
 		SpotPrice:    aws.String(d["spot_price"].(string)),
 	}
 
+	placement := new(ec2.SpotPlacement)
 	if v, ok := d["availability_zone"]; ok {
-		opts.Placement = &ec2.SpotPlacement{
-			AvailabilityZone: aws.String(v.(string)),
-		}
+		placement.AvailabilityZone = aws.String(v.(string))
+		opts.Placement = placement
+	}
+
+	if v, ok := d["placement_tenancy"]; ok {
+		placement.Tenancy = aws.String(v.(string))
+		opts.Placement = placement
 	}
 
 	if v, ok := d["ebs_optimized"]; ok {
@@ -791,7 +801,9 @@ func launchSpecToMap(l *ec2.SpotFleetLaunchSpecification, rootDevName *string) m
 
 	securityGroupIds := &schema.Set{F: schema.HashString}
 	if len(l.NetworkInterfaces) > 0 {
-		// This resource auto-creates one network interface when associate_public_ip_address is true
+		m["associate_public_ip_address"] = aws.BoolValue(l.NetworkInterfaces[0].AssociatePublicIpAddress)
+		m["subnet_id"] = aws.StringValue(l.NetworkInterfaces[0].SubnetId)
+
 		for _, group := range l.NetworkInterfaces[0].Groups {
 			securityGroupIds.Add(aws.StringValue(group))
 		}

@@ -32,10 +32,19 @@ func resourceAwsDbParameterGroup() *schema.Resource {
 				Computed: true,
 			},
 			"name": &schema.Schema{
+				Type:          schema.TypeString,
+				Optional:      true,
+				Computed:      true,
+				ForceNew:      true,
+				ConflictsWith: []string{"name_prefix"},
+				ValidateFunc:  validateDbParamGroupName,
+			},
+			"name_prefix": &schema.Schema{
 				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
 				ForceNew:     true,
-				Required:     true,
-				ValidateFunc: validateDbParamGroupName,
+				ValidateFunc: validateDbParamGroupNamePrefix,
 			},
 			"family": &schema.Schema{
 				Type:     schema.TypeString,
@@ -81,8 +90,18 @@ func resourceAwsDbParameterGroupCreate(d *schema.ResourceData, meta interface{})
 	rdsconn := meta.(*AWSClient).rdsconn
 	tags := tagsFromMapRDS(d.Get("tags").(map[string]interface{}))
 
+	var groupName string
+	if v, ok := d.GetOk("name"); ok {
+		groupName = v.(string)
+	} else if v, ok := d.GetOk("name_prefix"); ok {
+		groupName = resource.PrefixedUniqueId(v.(string))
+	} else {
+		groupName = resource.UniqueId()
+	}
+	d.Set("name", groupName)
+
 	createOpts := rds.CreateDBParameterGroupInput{
-		DBParameterGroupName:   aws.String(d.Get("name").(string)),
+		DBParameterGroupName:   aws.String(groupName),
 		DBParameterGroupFamily: aws.String(d.Get("family").(string)),
 		Description:            aws.String(d.Get("description").(string)),
 		Tags:                   tags,
@@ -231,41 +250,24 @@ func resourceAwsDbParameterGroupUpdate(d *schema.ResourceData, meta interface{})
 }
 
 func resourceAwsDbParameterGroupDelete(d *schema.ResourceData, meta interface{}) error {
-	stateConf := &resource.StateChangeConf{
-		Pending:    []string{"pending"},
-		Target:     []string{"destroyed"},
-		Refresh:    resourceAwsDbParameterGroupDeleteRefreshFunc(d, meta),
-		Timeout:    3 * time.Minute,
-		MinTimeout: 1 * time.Second,
-	}
-	_, err := stateConf.WaitForState()
-	return err
-}
-
-func resourceAwsDbParameterGroupDeleteRefreshFunc(
-	d *schema.ResourceData,
-	meta interface{}) resource.StateRefreshFunc {
-	rdsconn := meta.(*AWSClient).rdsconn
-
-	return func() (interface{}, string, error) {
-
+	conn := meta.(*AWSClient).rdsconn
+	return resource.Retry(3*time.Minute, func() *resource.RetryError {
 		deleteOpts := rds.DeleteDBParameterGroupInput{
 			DBParameterGroupName: aws.String(d.Id()),
 		}
 
-		if _, err := rdsconn.DeleteDBParameterGroup(&deleteOpts); err != nil {
-			rdserr, ok := err.(awserr.Error)
-			if !ok {
-				return d, "error", err
+		_, err := conn.DeleteDBParameterGroup(&deleteOpts)
+		if err != nil {
+			awsErr, ok := err.(awserr.Error)
+			if ok && awsErr.Code() == "DBParameterGroupNotFoundFault" {
+				return resource.RetryableError(err)
 			}
-
-			if rdserr.Code() != "DBParameterGroupNotFoundFault" {
-				return d, "error", err
+			if ok && awsErr.Code() == "InvalidDBParameterGroupState" {
+				return resource.RetryableError(err)
 			}
 		}
-
-		return d, "destroyed", nil
-	}
+		return resource.NonRetryableError(err)
+	})
 }
 
 func resourceAwsDbParameterHash(v interface{}) int {
