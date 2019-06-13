@@ -2,7 +2,7 @@
 
 ## Terraform
 
-- Handle the attribute name differences mentioned in attrs.go. Probably easiest
+- Handle the attribute name differences mentioned in [tf_attrs.go](tf_attrs.go). Probably easiest
   to change from set-like maps to actual maps of attribute names to attribute
   names and use that to replace the attribute keys?
 - Figure out how to handle resources with a `count` where an extra `.<index>` is
