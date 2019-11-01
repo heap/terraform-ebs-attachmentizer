@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -47,6 +48,7 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 	for _, resv := range resp.Reservations {
 		for _, instance := range resv.Instances {
 			id := *instance.InstanceId
+			log.Printf("ec2 instance found: %v", id)
 			devMap := make(map[DeviceName]BlockDevice)
 			for _, blkDev := range instance.BlockDeviceMappings {
 				devMap[NewDeviceName(*blkDev.DeviceName)] = BlockDevice{
@@ -57,6 +59,7 @@ func (c *EC2) GetInstances(instanceNamePattern string) (map[string]Instance, err
 					instanceID:       id,
 					availabilityZone: *instance.Placement.AvailabilityZone,
 				}
+				log.Printf("Block Device found %v", *blkDev.Ebs.VolumeId)
 			}
 			instMap[id] = Instance{ID: id, BlockDevices: devMap}
 		}

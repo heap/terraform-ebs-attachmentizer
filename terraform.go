@@ -137,80 +137,80 @@ func mergeAndValidateBlockDevs(devFromTF BlockDevice, devFromEC2 BlockDevice) (B
 // Do The Conversion on the Terraform state file given the extra resource ID
 // information from EC2. Returns the new terraform state, and a suggested configuration
 // string for use in the `.tf` source file.
-func generateNewTFState(stateToModify *tf.State, instMap map[string]Instance) (*tf.State, string) {
+func generateNewTFState(stateToModify *tf.State, instMap map[string]Instance) (*tf.State) {
 	outState := stateToModify.DeepCopy()
-	root := outState.Modules[0]
 
-	var newDevs []BlockDevice
-	newResources := make(map[string]*tf.ResourceState)
+	for _, module := range outState.Modules {
+		var newDevs []BlockDevice
+		newResources := make(map[string]*tf.ResourceState)
 
-	for name, res := range root.Resources {
-		if res.Type != "aws_instance" {
-			// Do nothing if the resource isn't an instance.
-			continue
-		}
-		inst, ok := instMap[res.Primary.ID]
-		if !ok {
-			// Do nothing if the instance wasn't one of the ones that the EC2
-			// query returned.
-			continue
-		}
-
-		interfaceDevices, ok := flatmap.Expand(
-			res.Primary.Attributes,
-			"ebs_block_device").([]interface{})
-
-		if !ok {
-			log.Fatalf("Could not expand ebs_block_device for %v", name)
-		}
-
-		// Delete the `ebs_block_device`s from the instance's state.
-		attrs := flatmap.Map(res.Primary.Attributes)
-		attrs.Delete("ebs_block_device")
-
-		devices, ok := mapify(interfaceDevices)
-		if !ok {
-			log.Fatalf("Could not mapify")
-		}
-
-		instanceResName, err := ParseTerraformName(name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		devMap, err := createDeviceMap(instanceResName, devices)
-		if err != nil {
-			log.Fatalf("Could not create device map: %v", err)
-		}
-
-		for devName, devFromTFState := range devMap {
-			// Get the corresponding block device information from EC2.
-			devFromEC2Info, ok := inst.BlockDevices[devName]
+		for name, res := range module.Resources {
+			if res.Type != "aws_instance" {
+				// Do nothing if the resource isn't an instance.
+				continue
+			}
+			inst, ok := instMap[res.Primary.ID]
 			if !ok {
-				log.Fatalf("Could not find corresponding block device in EC2 for %v", devName)
+				// Do nothing if the instance wasn't one of the ones that the EC2
+				// query returned.
+				continue
 			}
 
-			// Merge in the relevant fields, and check that everything looks reasonable.
-			dev, err := mergeAndValidateBlockDevs(devFromTFState, devFromEC2Info)
+			interfaceDevices, ok := flatmap.Expand(
+				res.Primary.Attributes,
+				"ebs_block_device").([]interface{})
+
+			if !ok {
+				log.Fatalf("Could not expand ebs_block_device for %v", name)
+			}
+
+			// Delete the `ebs_block_device`s from the instance's state.
+			attrs := flatmap.Map(res.Primary.Attributes)
+			attrs.Delete("ebs_block_device")
+
+			devices, ok := mapify(interfaceDevices)
+			if !ok {
+				log.Fatalf("Could not mapify")
+			}
+
+			instanceResName, err := ParseTerraformName(name)
 			if err != nil {
 				log.Fatal(err)
 			}
+			devMap, err := createDeviceMap(instanceResName, devices)
+			if err != nil {
+				log.Fatalf("Could not create device map: %v", err)
+			}
 
-			volumeRes := dev.makeVolumeRes()
-			attachmentRes := dev.makeAttachmentRes()
+			for devName, devFromTFState := range devMap {
+				// Get the corresponding block device information from EC2.
+				devFromEC2Info, ok := inst.BlockDevices[devName]
+				if !ok {
+					log.Fatalf("Could not find corresponding block device in EC2 for %v", devName)
+				}
 
-			newResources[dev.VolumeName()] = volumeRes
-			newResources[dev.VolumeAttachmentName()] = attachmentRes
+				// Merge in the relevant fields, and check that everything looks reasonable.
+				dev, err := mergeAndValidateBlockDevs(devFromTFState, devFromEC2Info)
+				if err != nil {
+					log.Fatal(err)
+				}
 
-			newDevs = append(newDevs, dev)
+				volumeRes := dev.makeVolumeRes()
+				attachmentRes := dev.makeAttachmentRes()
+
+				newResources[dev.VolumeName()] = volumeRes
+				newResources[dev.VolumeAttachmentName()] = attachmentRes
+
+				newDevs = append(newDevs, dev)
+			}
+		}
+
+		for k, v := range newResources {
+			module.Resources[k] = v
 		}
 	}
 
-	for k, v := range newResources {
-		root.Resources[k] = v
-	}
-
-	config := genConfig(newDevs)
-	return outState, config
+	return outState
 }
 
 // Do The Conversion on the Terraform state file given the extra resource ID
@@ -220,7 +220,7 @@ func ConvertTFState(stateFilePath string, stateOutPath string, configOutPath str
 	localState.RefreshState()
 	stateToModify := localState.State()
 
-	newState, newConfig := generateNewTFState(stateToModify, instMap)
+	newState := generateNewTFState(stateToModify, instMap)
 	fmt.Print("========Successfully generated new state========\n")
 
 	// WriteState updates the state `serial`, so we don't have to worry about it.
@@ -232,6 +232,6 @@ func ConvertTFState(stateFilePath string, stateOutPath string, configOutPath str
 		log.Fatal(err)
 	}
 	defer f.Close()
-	f.WriteString(newConfig)
+	// f.WriteString(newConfig)
 	fmt.Printf("\nWrote configuration suggestion to %v", configOutPath)
 }
